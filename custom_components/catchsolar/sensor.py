@@ -17,6 +17,7 @@ DEVICE_SENSOR_KEYS = {
     "channel_2_type": "Channel 2 Type",
     "controlling_load": "Controlling Load",
     "controlling_inverter": "Controlling Inverter",
+    "impl_class": "Implementation Class",
 }
 
 POWER_SENSOR_KEYS = {
@@ -63,6 +64,12 @@ class CatchSolarDeviceMetadataSensor(CatchSolarCoordinatorEntity, SensorEntity):
     def native_value(self):
         device = self.device_entry or {}
         return device.get(self._key)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        return {
+            "is_primary_device": self._device_id == self.coordinator.data.get("primary_device_id"),
+        }
 
 
 class CatchSolarPowerSensor(CatchSolarLocationEntity, SensorEntity):

@@ -8,6 +8,7 @@ This integration connects to the Monocle API via a Home Assistant config flow an
 - device online/connectivity state
 - device metadata sensors
 - latest 24-hour power-series values
+- reauthentication support when Monocle credentials change
 
 No user credentials belong in this repository. Users enter their Catch Solar credentials in Home Assistant during setup; Home Assistant stores them in the config entry.
 
@@ -46,5 +47,7 @@ The config flow:
 
 - This repo intentionally contains no real Catch Solar usernames, passwords, tokens, or personal location metadata.
 - Polling interval and 24-hour power data are configurable in the integration options.
+- If credentials expire or change, Home Assistant can prompt for reauthentication through the config entry.
+- Diagnostics are intended to be shareable: sensitive values such as usernames, passwords, and tokens are redacted.
 - `Export/Import` sign conventions may vary by upstream behavior and are passed through conservatively.
 - Water-heater runtime helpers/automations are better handled in Home Assistant, not hard-coded into the integration.

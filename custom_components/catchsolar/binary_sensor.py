@@ -40,7 +40,10 @@ class CatchSolarLoadStateBinarySensor(CatchSolarCoordinatorEntity, BinarySensorE
     @property
     def extra_state_attributes(self) -> dict[str, object]:
         device = self.device_entry or {}
-        return {"raw_load_state": device.get("load_state")}
+        return {
+            "raw_load_state": device.get("load_state"),
+            "is_primary_device": self._device_id == self.coordinator.data.get("primary_device_id"),
+        }
 
 
 class CatchSolarOnlineBinarySensor(CatchSolarCoordinatorEntity, BinarySensorEntity):
@@ -56,3 +59,11 @@ class CatchSolarOnlineBinarySensor(CatchSolarCoordinatorEntity, BinarySensorEnti
     def is_on(self) -> bool:
         device = self.device_entry or {}
         return int(device.get("online", 0)) == 1
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        device = self.device_entry or {}
+        return {
+            "impl_class": device.get("impl_class"),
+            "is_primary_device": self._device_id == self.coordinator.data.get("primary_device_id"),
+        }

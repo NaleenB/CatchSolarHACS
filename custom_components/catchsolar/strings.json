@@ -15,6 +15,14 @@
         "data": {
           "location_id": "Location"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reconnect Catch Solar",
+        "description": "Update your Catch Solar / Monocle account details.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -22,6 +30,10 @@
       "invalid_auth": "Invalid authentication",
       "no_locations": "No locations returned",
       "invalid_location": "Invalid location"
+    },
+    "abort": {
+      "reauth_successful": "Reauthentication was successful.",
+      "reauth_unsuccessful": "Reauthentication could not be completed."
     }
   },
   "options": {

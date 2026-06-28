@@ -34,6 +34,7 @@ def test_normalize_device_entry() -> None:
     assert normalized["load_state"] == 1
     assert normalized["online"] == 1
     assert normalized["serial_number"] == "SERIAL-001"
+    assert normalized["impl_class"] == "solar-relay/SolarRelay"
 
 
 def test_pick_primary_device_prefers_controlling_load() -> None:
@@ -42,6 +43,15 @@ def test_pick_primary_device_prefers_controlling_load() -> None:
         {"id": 2, "controlling_load": 1},
     ]
     assert pick_primary_device(devices) == {"id": 2, "controlling_load": 1}
+
+
+def test_pick_primary_device_falls_back_to_first_device() -> None:
+    devices = [{"id": 1, "controlling_load": 0}, {"id": 2, "controlling_load": 0}]
+    assert pick_primary_device(devices) == {"id": 1, "controlling_load": 0}
+
+
+def test_parse_locations_ignores_invalid_result_shape() -> None:
+    assert parse_locations({"result": "invalid"}) == []
 
 
 def test_extract_latest_power_series() -> None:

@@ -29,12 +29,14 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
         device = self.device_entry
         if device is None:
             return None
+        via_location_id = self.location_entry.get("id")
         return DeviceInfo(
             identifiers={(DOMAIN, f"device_{device.get('id')}")},
             manufacturer="CATCH Power",
             model=device.get("device_type") or "Solar Relay",
             name=device.get("device_name") or device.get("serial_number") or "Catch Solar Device",
             serial_number=device.get("serial_number"),
+            via_device=(DOMAIN, f"location_{via_location_id}") if via_location_id is not None else None,
         )
 
 
