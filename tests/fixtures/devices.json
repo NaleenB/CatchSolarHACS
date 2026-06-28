@@ -1,0 +1,18 @@
+[
+  {
+    "online": 1,
+    "loadState": 1,
+    "device": {
+      "id": 9001,
+      "serialNumber": "SERIAL-001",
+      "deviceName": "Relay 1",
+      "deviceType": "SR",
+      "locationId": 1234,
+      "ch1Type": "MAINS",
+      "ch2Type": "SOLAR",
+      "controllingLoad": 1,
+      "controllingInverter": 1,
+      "implClass": "solar-relay/SolarRelay"
+    }
+  }
+]

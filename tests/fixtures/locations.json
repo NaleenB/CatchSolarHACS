@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "result": [
+    {
+      "id": 1234,
+      "name": "Example Site",
+      "address": "Example Address",
+      "postcode": "4000"
+    }
+  ]
+}

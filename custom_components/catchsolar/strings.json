@@ -1,0 +1,38 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect Catch Solar",
+        "description": "Enter your Catch Solar / Monocle account details.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "location": {
+        "title": "Select location",
+        "description": "Choose the Catch Solar location to add.",
+        "data": {
+          "location_id": "Location"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "no_locations": "No locations returned",
+      "invalid_location": "Invalid location"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Catch Solar options",
+        "data": {
+          "scan_interval": "Polling interval (seconds)",
+          "enable_power_data": "Enable 24-hour power data"
+        }
+      }
+    }
+  }
+}

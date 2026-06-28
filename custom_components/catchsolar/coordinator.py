@@ -1,0 +1,52 @@
+from __future__ import annotations
+
+from datetime import timedelta
+import logging
+from typing import Any
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
+
+from .api import CatchSolarApiClient, CatchSolarApiError
+from .const import CONF_ENABLE_POWER_DATA, CONF_LOCATION_ID, CONF_LOCATION_NAME, CONF_SCAN_INTERVAL, DEFAULT_ENABLE_POWER_DATA, DEFAULT_SCAN_INTERVAL_SECONDS
+from .parsing import extract_latest_power_series, normalize_device_entry
+
+
+class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    def __init__(self, hass: HomeAssistant, api: CatchSolarApiClient, config: dict[str, Any]) -> None:
+        scan_interval = int(config.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_SECONDS))
+        super().__init__(
+            hass,
+            logger=logging.getLogger(__name__),
+            name="Catch Solar",
+            update_interval=timedelta(seconds=scan_interval),
+        )
+        self.api = api
+        self.config = config
+
+    async def _async_update_data(self) -> dict[str, Any]:
+        try:
+            location_id = int(self.config[CONF_LOCATION_ID])
+            location_name = self.config.get(CONF_LOCATION_NAME)
+
+            locations = await self.api.async_get_locations()
+            location = next((item for item in locations if item.get("id") == location_id), None)
+            if location is None:
+                location = {"id": location_id, "name": location_name}
+
+            devices = [
+                normalize_device_entry(item)
+                for item in await self.api.async_get_devices(location_id)
+            ]
+
+            power_data: dict[str, Any] | None = None
+            if self.config.get(CONF_ENABLE_POWER_DATA, DEFAULT_ENABLE_POWER_DATA):
+                date_to = dt_util.now().isoformat(timespec="milliseconds")
+                power_data = extract_latest_power_series(
+                    await self.api.async_get_data24(location_id, date_to)
+                )
+
+            return {"location": location, "devices": devices, "power": power_data}
+        except CatchSolarApiError as err:
+            raise UpdateFailed(str(err)) from err

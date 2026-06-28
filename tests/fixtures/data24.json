@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "result": {
+    "xAxis": [1782646200000, 1782646500000],
+    "seriesList": [
+      {"name": "Solar", "data": [1000, 1200]},
+      {"name": "Total Consumption", "data": [800, 900]},
+      {"name": "Export/Import", "data": [200, 300]},
+      {"name": "undefined", "data": [200, 300]}
+    ]
+  }
+}
