@@ -39,6 +39,8 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
 
 
 class CatchSolarLocationEntity(CoordinatorEntity):
+    _attr_has_entity_name = True
+
     @property
     def location_entry(self) -> dict[str, Any]:
         return self.coordinator.data.get("location", {})

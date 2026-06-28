@@ -7,6 +7,8 @@ API_BASE = "https://monocle0.edde.world"
 
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
+CONF_USERNAME = "username"
+CONF_PASSWORD = "password"
 CONF_ACCOUNT_ID = "account_id"
 CONF_LOCATION_ID = "location_id"
 CONF_LOCATION_NAME = "location_name"

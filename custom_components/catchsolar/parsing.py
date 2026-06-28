@@ -37,6 +37,13 @@ def normalize_device_entry(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def pick_primary_device(devices: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for device in devices:
+        if int(device.get("controlling_load", 0) or 0) == 1:
+            return device
+    return devices[0] if devices else None
+
+
 def _latest_non_null(values: list[Any]) -> float | int | None:
     for value in reversed(values):
         if value is not None:

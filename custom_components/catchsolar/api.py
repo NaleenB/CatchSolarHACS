@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
-from aiohttp import ClientResponseError, ClientSession
+from aiohttp import ClientError, ClientResponseError, ClientSession
+from json import JSONDecodeError
 
 from .const import API_BASE
 from .parsing import parse_locations
@@ -66,7 +68,7 @@ class CatchSolarApiClient:
             raise
         except ClientResponseError as err:
             raise CatchSolarApiError(f"HTTP error {err.status} for {path}") from err
-        except Exception as err:
+        except (ClientError, asyncio.TimeoutError, JSONDecodeError) as err:
             raise CatchSolarApiError(f"Request failed for {path}") from err
 
     async def async_login(self) -> dict[str, Any]:
@@ -100,6 +102,10 @@ class CatchSolarApiClient:
             json_payload={"locationId": location_id},
             authenticated=True,
         )
+        if isinstance(payload, dict):
+            result = payload.get("result")
+            if isinstance(result, list):
+                payload = result
         if not isinstance(payload, list):
             raise CatchSolarApiError("Invalid devices payload")
         return [item for item in payload if isinstance(item, dict)]

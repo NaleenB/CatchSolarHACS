@@ -4,7 +4,7 @@
   "codeowners": ["@NaleenB"],
   "config_flow": true,
   "documentation": "https://github.com/NaleenB/CatchSolarHACS",
-  "integration_type": "service",
+  "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/NaleenB/CatchSolarHACS/issues",
   "loggers": ["custom_components.catchsolar"],

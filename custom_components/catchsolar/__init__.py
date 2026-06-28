@@ -2,18 +2,19 @@ from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import CatchSolarApiClient
-from .const import DOMAIN, PLATFORMS
+from .const import CONF_PASSWORD, CONF_USERNAME, DOMAIN, PLATFORMS
 from .coordinator import CatchSolarDataUpdateCoordinator
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     api = CatchSolarApiClient(
         async_get_clientsession(hass),
-        entry.data["username"],
-        entry.data["password"],
+        entry.data[CONF_USERNAME],
+        entry.data[CONF_PASSWORD],
     )
 
     coordinator = CatchSolarDataUpdateCoordinator(hass, api, {**entry.data, **entry.options})
@@ -32,6 +33,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
     return unload_ok
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, entry: ConfigEntry, device_entry: dr.DeviceEntry
+) -> bool:
+    identifiers = {identifier for identifier in device_entry.identifiers if identifier[0] == DOMAIN}
+    return bool(identifiers)
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:

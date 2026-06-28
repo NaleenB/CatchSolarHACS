@@ -10,7 +10,7 @@ from homeassistant.util import dt as dt_util
 
 from .api import CatchSolarApiClient, CatchSolarApiError
 from .const import CONF_ENABLE_POWER_DATA, CONF_LOCATION_ID, CONF_LOCATION_NAME, CONF_SCAN_INTERVAL, DEFAULT_ENABLE_POWER_DATA, DEFAULT_SCAN_INTERVAL_SECONDS
-from .parsing import extract_latest_power_series, normalize_device_entry
+from .parsing import extract_latest_power_series, normalize_device_entry, pick_primary_device
 
 
 class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -47,6 +47,11 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     await self.api.async_get_data24(location_id, date_to)
                 )
 
-            return {"location": location, "devices": devices, "power": power_data}
+            return {
+                "location": location,
+                "devices": devices,
+                "primary_device_id": (pick_primary_device(devices) or {}).get("id"),
+                "power": power_data,
+            }
         except CatchSolarApiError as err:
             raise UpdateFailed(str(err)) from err

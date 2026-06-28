@@ -10,6 +10,7 @@ from .const import DOMAIN
 from .entity import CatchSolarCoordinatorEntity, CatchSolarLocationEntity
 
 DEVICE_SENSOR_KEYS = {
+    "load_state": "Load State Raw",
     "serial_number": "Serial Number",
     "device_type": "Device Type",
     "channel_1_type": "Channel 1 Type",
@@ -55,6 +56,8 @@ class CatchSolarDeviceMetadataSensor(CatchSolarCoordinatorEntity, SensorEntity):
         self._key = key
         self._attr_unique_id = f"{device_id}_{key}"
         self._attr_name = name
+        if key == "load_state":
+            self._attr_entity_category = None
 
     @property
     def native_value(self):

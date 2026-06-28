@@ -14,6 +14,7 @@ SPEC.loader.exec_module(MODULE)
 extract_latest_power_series = MODULE.extract_latest_power_series
 normalize_device_entry = MODULE.normalize_device_entry
 parse_locations = MODULE.parse_locations
+pick_primary_device = MODULE.pick_primary_device
 
 
 def _load_fixture(name: str):
@@ -35,6 +36,14 @@ def test_normalize_device_entry() -> None:
     assert normalized["serial_number"] == "SERIAL-001"
 
 
+def test_pick_primary_device_prefers_controlling_load() -> None:
+    devices = [
+        {"id": 1, "controlling_load": 0},
+        {"id": 2, "controlling_load": 1},
+    ]
+    assert pick_primary_device(devices) == {"id": 2, "controlling_load": 1}
+
+
 def test_extract_latest_power_series() -> None:
     payload = _load_fixture("data24.json")
     result = extract_latest_power_series(payload)
@@ -43,3 +52,19 @@ def test_extract_latest_power_series() -> None:
     assert result["series"]["total_consumption_power"] == 900
     assert result["series"]["export_import_power"] == 300
     assert "undefined" not in result["series"]
+
+
+def test_extract_latest_power_series_uses_latest_non_null_value() -> None:
+    payload = {
+        "result": {
+            "xAxis": [1, 2, 3],
+            "seriesList": [
+                {"name": "Solar", "data": [1000, None, None]},
+                {"name": "Total Consumption", "data": [None, 800, None]},
+            ],
+        }
+    }
+    result = extract_latest_power_series(payload)
+    assert result["timestamp_ms"] == 3
+    assert result["series"]["solar_power"] == 1000
+    assert result["series"]["total_consumption_power"] == 800

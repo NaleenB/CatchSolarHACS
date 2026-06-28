@@ -7,7 +7,18 @@ from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import CatchSolarApiAuthError, CatchSolarApiClient, CatchSolarApiError
-from .const import CONF_ACCOUNT_ID, CONF_ENABLE_POWER_DATA, CONF_LOCATION_ID, CONF_LOCATION_NAME, CONF_SCAN_INTERVAL, DEFAULT_ENABLE_POWER_DATA, DEFAULT_SCAN_INTERVAL_SECONDS, DOMAIN
+from .const import (
+    CONF_ACCOUNT_ID,
+    CONF_ENABLE_POWER_DATA,
+    CONF_LOCATION_ID,
+    CONF_LOCATION_NAME,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+    CONF_USERNAME,
+    DEFAULT_ENABLE_POWER_DATA,
+    DEFAULT_SCAN_INTERVAL_SECONDS,
+    DOMAIN,
+)
 
 
 class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -23,8 +34,8 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            self._username = str(user_input["username"])
-            self._password = str(user_input["password"])
+            self._username = str(user_input[CONF_USERNAME])
+            self._password = str(user_input[CONF_PASSWORD])
             api = CatchSolarApiClient(
                 async_get_clientsession(self.hass),
                 self._username,
@@ -49,8 +60,8 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required("username"): str,
-                    vol.Required("password"): str,
+                    vol.Required(CONF_USERNAME): str,
+                    vol.Required(CONF_PASSWORD): str,
                 }
             ),
             errors=errors,
@@ -86,8 +97,8 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(
             title=location.get("name") or f"Catch Solar {location_id}",
             data={
-                "username": self._username,
-                "password": self._password,
+                CONF_USERNAME: self._username,
+                CONF_PASSWORD: self._password,
                 CONF_ACCOUNT_ID: self._account_id,
                 CONF_LOCATION_ID: location_id,
                 CONF_LOCATION_NAME: location.get("name"),
