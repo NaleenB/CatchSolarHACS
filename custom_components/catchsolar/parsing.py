@@ -54,12 +54,13 @@ def _latest_non_null(values: list[Any]) -> float | int | None:
 def extract_latest_power_series(payload: dict[str, Any]) -> dict[str, Any]:
     result = payload.get("result")
     if not isinstance(result, dict):
-        return {"timestamp_ms": None, "series": {}}
+        return {"timestamp_ms": None, "series": {}, "latest_non_null_series": {}}
 
     x_axis = result.get("xAxis")
     timestamp_ms = x_axis[-1] if isinstance(x_axis, list) and x_axis else None
 
     extracted: dict[str, Any] = {}
+    latest_non_null_series: dict[str, Any] = {}
     for series in result.get("seriesList", []):
         if not isinstance(series, dict):
             continue
@@ -68,6 +69,11 @@ def extract_latest_power_series(payload: dict[str, Any]) -> dict[str, Any]:
         data = series.get("data")
         if key is None or not isinstance(data, list):
             continue
-        extracted[key] = _latest_non_null(data)
+        extracted[key] = data[-1] if data else None
+        latest_non_null_series[key] = _latest_non_null(data)
 
-    return {"timestamp_ms": timestamp_ms, "series": extracted}
+    return {
+        "timestamp_ms": timestamp_ms,
+        "series": extracted,
+        "latest_non_null_series": latest_non_null_series,
+    }

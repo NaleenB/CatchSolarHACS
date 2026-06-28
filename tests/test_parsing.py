@@ -61,10 +61,11 @@ def test_extract_latest_power_series() -> None:
     assert result["series"]["solar_power"] == 1200
     assert result["series"]["total_consumption_power"] == 900
     assert result["series"]["export_import_power"] == 300
+    assert result["latest_non_null_series"]["solar_power"] == 1200
     assert "undefined" not in result["series"]
 
 
-def test_extract_latest_power_series_uses_latest_non_null_value() -> None:
+def test_extract_latest_power_series_keeps_latest_value_and_tracks_non_null_fallback() -> None:
     payload = {
         "result": {
             "xAxis": [1, 2, 3],
@@ -76,5 +77,7 @@ def test_extract_latest_power_series_uses_latest_non_null_value() -> None:
     }
     result = extract_latest_power_series(payload)
     assert result["timestamp_ms"] == 3
-    assert result["series"]["solar_power"] == 1000
-    assert result["series"]["total_consumption_power"] == 800
+    assert result["series"]["solar_power"] is None
+    assert result["series"]["total_consumption_power"] is None
+    assert result["latest_non_null_series"]["solar_power"] == 1000
+    assert result["latest_non_null_series"]["total_consumption_power"] == 800

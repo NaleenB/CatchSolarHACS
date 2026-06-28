@@ -53,6 +53,7 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "devices": devices,
                 "primary_device_id": (pick_primary_device(devices) or {}).get("id"),
                 "power": power_data,
+                "last_polled_at": dt_util.utcnow().isoformat(),
             }
         except CatchSolarApiAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err

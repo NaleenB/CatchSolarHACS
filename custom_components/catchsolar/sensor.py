@@ -5,6 +5,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfPower
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .entity import CatchSolarCoordinatorEntity, CatchSolarLocationEntity
@@ -21,9 +22,9 @@ DEVICE_SENSOR_KEYS = {
 }
 
 POWER_SENSOR_KEYS = {
-    "solar_power": "Solar Power",
-    "total_consumption_power": "Total Consumption Power",
-    "export_import_power": "Export/Import Power",
+    "solar_power": "Monocle Solar Power",
+    "total_consumption_power": "Monocle Total Consumption Power",
+    "export_import_power": "Monocle Export/Import Power",
 }
 
 
@@ -112,4 +113,20 @@ class CatchSolarPowerSensor(CatchSolarLocationEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, object]:
         power = self.coordinator.data.get("power") or {}
-        return {"timestamp_ms": power.get("timestamp_ms")}
+        timestamp_ms = power.get("timestamp_ms")
+        timestamp_local = None
+        if isinstance(timestamp_ms, (int, float)):
+            timestamp_local = dt_util.as_local(
+                dt_util.utc_from_timestamp(float(timestamp_ms) / 1000)
+            ).isoformat()
+
+        latest_non_null = (power.get("latest_non_null_series") or {}).get(self._key)
+
+        return {
+            "series_key": self._key,
+            "series_resolution_seconds": 300,
+            "timestamp_ms": timestamp_ms,
+            "timestamp_local": timestamp_local,
+            "latest_non_null_value": latest_non_null,
+            "last_polled_at": self.coordinator.data.get("last_polled_at"),
+        }
