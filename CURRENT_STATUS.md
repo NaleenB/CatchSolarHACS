@@ -14,33 +14,20 @@ Last updated: 2026-06-29
 - `6735b57` — Refine Catch Solar integration scaffold
 - `dcd47a4` — Add reauth and diagnostics support
 - `3b8eac3` — Add primary load label option and tests
+- `1021b5f` — Fix HA 2026.6 config flow and entity collisions
+- `03fa9b1` — Clarify Monocle power feed behavior
 
 ## Current local-only work (not yet committed)
 
-Home Assistant 2026.6 compatibility fix plus Monocle feed cleanup:
+Release follow-up:
 
-- renamed the custom `device_entry` entity property to avoid colliding with HA core
-- renamed the custom options-flow `config_entry` attribute to avoid colliding with HA core
-- bumped integration version to `0.1.1`
-- clarified power sensor names to explicitly reflect raw Monocle telemetry
-- stopped backfilling stale power values when the latest Monocle bucket is `null`
-- added `last_polled_at` plus bucket timestamp metadata so 60-second polling is visible even when Monocle only publishes a new 5-minute bucket
-- added regression tests covering both the HA compatibility fix and the power-series parsing/entity metadata behavior
+- bump integration version to `0.1.2`
+- publish a fresh tag because `v0.1.1` already points at the earlier HA 2026.6 fix commit
 
 Modified files:
 
 - `CURRENT_STATUS.md`
-- `README.md`
-- `custom_components/catchsolar/binary_sensor.py`
-- `custom_components/catchsolar/config_flow.py`
-- `custom_components/catchsolar/entity.py`
 - `custom_components/catchsolar/manifest.json`
-- `custom_components/catchsolar/coordinator.py`
-- `custom_components/catchsolar/parsing.py`
-- `custom_components/catchsolar/sensor.py`
-- `tests/test_config_flow.py`
-- `tests/test_parsing.py`
-- `tests/test_entity.py`
 
 Validation already run:
 
@@ -51,29 +38,28 @@ Validation already run:
 
 User asked to continue the full rollout:
 
-1. commit the HA 2026.6 compatibility fix
-2. push a patch release
-3. update HACS in live Home Assistant
-4. verify the options flow with a semantic label such as `Water Heater`
-5. compare Monocle `data24` against live HA power sensors and refine naming/polling behavior
+1. push a patch release
+2. update HACS in live Home Assistant
+3. verify the options flow with a semantic label such as `Water Heater`
+4. verify the Monocle `data24` naming/null-handling/poll metadata on the live install
 
-- Step 1 is still ready
-- Step 5 is now partially implemented locally
-- Steps 2-4 are still next after validating the new local changes
+- Release commit `03fa9b1` is already on `main`
+- A new version/tag is required because `v0.1.1` already exists on the previous release commit
+- Live HACS update and verification are next
 
 ## Recommended next steps
 
-1. Run `pytest` and a quick import/compile check on the new parsing/sensor changes
-2. Commit and push `0.1.1`
-3. Create GitHub tag/release `v0.1.1`
-4. Update the HACS install in Home Assistant
-5. Verify that the Catch Solar power entities now show `last_polled_at` every 60 seconds and report `unavailable` instead of stale `0` when Monocle omits a bucket value
+1. Commit the `0.1.2` version bump
+2. Push and create GitHub tag/release `v0.1.2`
+3. Update the HACS install in Home Assistant
+4. Verify that the Catch Solar power entities now show `last_polled_at` every 60 seconds and report `unknown`/no state instead of stale `0` when Monocle omits a bucket value
 
 ## Home Assistant side context
 
 - HACS has already installed `v0.1.0` from this public repo.
 - The live config entry id is `01KW82PMQTTVX8AWT07PW40X49`.
-- The current blocker is the HA 2026.6 options-flow/device-property collision fixed in this local patch.
+- `v0.1.1` is already published and maps to commit `1021b5f`.
+- The Monocle telemetry cleanup is on commit `03fa9b1`, so it needs a new release tag.
 
 ## Monocle `data24` findings
 
