@@ -13,9 +13,11 @@ from .const import (
     CONF_LOCATION_ID,
     CONF_LOCATION_NAME,
     CONF_PASSWORD,
+    CONF_PRIMARY_LOAD_LABEL,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
     DEFAULT_ENABLE_POWER_DATA,
+    DEFAULT_PRIMARY_LOAD_LABEL,
     DEFAULT_SCAN_INTERVAL_SECONDS,
     DOMAIN,
 )
@@ -107,6 +109,7 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             options={
                 CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL_SECONDS,
                 CONF_ENABLE_POWER_DATA: DEFAULT_ENABLE_POWER_DATA,
+                CONF_PRIMARY_LOAD_LABEL: DEFAULT_PRIMARY_LOAD_LABEL,
             },
         )
 
@@ -187,6 +190,12 @@ class CatchSolarOptionsFlow(config_entries.OptionsFlow):
                             CONF_ENABLE_POWER_DATA, DEFAULT_ENABLE_POWER_DATA
                         ),
                     ): bool,
+                    vol.Required(
+                        CONF_PRIMARY_LOAD_LABEL,
+                        default=self.config_entry.options.get(
+                            CONF_PRIMARY_LOAD_LABEL, DEFAULT_PRIMARY_LOAD_LABEL
+                        ),
+                    ): str,
                 }
             ),
         )

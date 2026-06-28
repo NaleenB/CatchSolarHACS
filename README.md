@@ -4,6 +4,7 @@ Home Assistant custom integration for Catch Solar / The Monocle.
 
 This integration connects to the Monocle API via a Home Assistant config flow and exposes:
 
+- a location-level primary load-state entity for stable automations/dashboards
 - device `loadState` as both a binary sensor and a raw diagnostic sensor
 - device online/connectivity state
 - device metadata sensors
@@ -15,6 +16,8 @@ No user credentials belong in this repository. Users enter their Catch Solar cre
 ## Current v1 scope
 
 - binary sensor for device `loadState`
+- binary sensor for primary device `loadState`
+- raw sensor for primary device `loadState`
 - raw sensor for device `loadState`
 - binary sensor for device online status
 - diagnostic sensors for serial, device type, channel types, and control flags
@@ -47,6 +50,7 @@ The config flow:
 
 - This repo intentionally contains no real Catch Solar usernames, passwords, tokens, or personal location metadata.
 - Polling interval and 24-hour power data are configurable in the integration options.
+- The integration options also let users rename the location-level primary load entities to a semantic label such as `Water Heater`.
 - If credentials expire or change, Home Assistant can prompt for reauthentication through the config entry.
 - Diagnostics are intended to be shareable: sensitive values such as usernames, passwords, and tokens are redacted.
 - `Export/Import` sign conventions may vary by upstream behavior and are passed through conservatively.

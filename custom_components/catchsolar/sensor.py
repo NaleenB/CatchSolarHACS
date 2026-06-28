@@ -31,7 +31,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    entities: list[SensorEntity] = []
+    entities: list[SensorEntity] = [CatchSolarPrimaryLoadStateRawSensor(coordinator)]
 
     for device in coordinator.data.get("devices", []):
         device_id = device.get("id")
@@ -57,8 +57,6 @@ class CatchSolarDeviceMetadataSensor(CatchSolarCoordinatorEntity, SensorEntity):
         self._key = key
         self._attr_unique_id = f"{device_id}_{key}"
         self._attr_name = name
-        if key == "load_state":
-            self._attr_entity_category = None
 
     @property
     def native_value(self):
@@ -69,6 +67,29 @@ class CatchSolarDeviceMetadataSensor(CatchSolarCoordinatorEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, object]:
         return {
             "is_primary_device": self._device_id == self.coordinator.data.get("primary_device_id"),
+        }
+
+
+class CatchSolarPrimaryLoadStateRawSensor(CatchSolarLocationEntity, SensorEntity):
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        location_id = self.location_entry.get("id", "unknown")
+        self._attr_unique_id = f"{location_id}_primary_load_state_raw"
+        self._attr_name = f"{self.primary_load_label} State Raw"
+
+    @property
+    def native_value(self):
+        primary = self.primary_device_entry or {}
+        return primary.get("load_state")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object]:
+        primary = self.primary_device_entry or {}
+        return {
+            "primary_device_id": primary.get("id"),
+            "primary_device_name": primary.get("device_name"),
         }
 
 

@@ -42,7 +42,8 @@
         "title": "Catch Solar options",
         "data": {
           "scan_interval": "Polling interval (seconds)",
-          "enable_power_data": "Enable 24-hour power data"
+          "enable_power_data": "Enable 24-hour power data",
+          "primary_load_label": "Primary load label"
         }
       }
     }

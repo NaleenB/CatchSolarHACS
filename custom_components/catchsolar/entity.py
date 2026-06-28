@@ -5,7 +5,7 @@ from typing import Any
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import CONF_PRIMARY_LOAD_LABEL, DEFAULT_PRIMARY_LOAD_LABEL, DOMAIN
 
 
 class CatchSolarCoordinatorEntity(CoordinatorEntity):
@@ -46,6 +46,21 @@ class CatchSolarLocationEntity(CoordinatorEntity):
     @property
     def location_entry(self) -> dict[str, Any]:
         return self.coordinator.data.get("location", {})
+
+    @property
+    def primary_device_entry(self) -> dict[str, Any] | None:
+        primary_device_id = self.coordinator.data.get("primary_device_id")
+        for device in self.coordinator.data.get("devices", []):
+            if device.get("id") == primary_device_id:
+                return device
+        return None
+
+    @property
+    def primary_load_label(self) -> str:
+        configured_label = self.coordinator.config.get(CONF_PRIMARY_LOAD_LABEL)
+        if isinstance(configured_label, str):
+            configured_label = configured_label.strip()
+        return configured_label or DEFAULT_PRIMARY_LOAD_LABEL
 
     @property
     def device_info(self) -> DeviceInfo:
