@@ -60,7 +60,7 @@ class CatchSolarDeviceMetadataSensor(CatchSolarCoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        device = self.device_entry or {}
+        device = self.catchsolar_device or {}
         return device.get(self._key)
 
     @property

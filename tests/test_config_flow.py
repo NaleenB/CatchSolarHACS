@@ -102,3 +102,29 @@ async def test_options_flow_returns_user_values(hass) -> None:
         CONF_ENABLE_POWER_DATA: True,
         CONF_PRIMARY_LOAD_LABEL: "Pool Pump",
     }
+
+
+async def test_options_flow_init_form_uses_existing_defaults(hass) -> None:
+    entry = config_entries.ConfigEntry(
+        version=1,
+        minor_version=1,
+        domain="catchsolar",
+        title="Home",
+        data={},
+        options={
+            CONF_SCAN_INTERVAL: 900,
+            CONF_ENABLE_POWER_DATA: False,
+            CONF_PRIMARY_LOAD_LABEL: "Water Heater",
+        },
+        source="user",
+        entry_id="test-entry",
+        discovery_keys={},
+        subentries_data={},
+    )
+    flow = CatchSolarConfigFlow.async_get_options_flow(entry)
+    flow.hass = hass
+
+    result = await flow.async_step_init()
+
+    assert result["type"] is FlowResultType.FORM
+    assert flow._config_entry is entry

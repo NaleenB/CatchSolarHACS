@@ -14,7 +14,7 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
         self._device_id = device_id
 
     @property
-    def device_entry(self) -> dict[str, Any] | None:
+    def catchsolar_device(self) -> dict[str, Any] | None:
         for device in self.coordinator.data.get("devices", []):
             if device.get("id") == self._device_id:
                 return device
@@ -26,7 +26,7 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
 
     @property
     def device_info(self) -> DeviceInfo | None:
-        device = self.device_entry
+        device = self.catchsolar_device
         if device is None:
             return None
         via_location_id = self.location_entry.get("id")

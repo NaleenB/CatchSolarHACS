@@ -168,7 +168,7 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class CatchSolarOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         if user_input is not None:
@@ -180,19 +180,19 @@ class CatchSolarOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         CONF_SCAN_INTERVAL,
-                        default=self.config_entry.options.get(
+                        default=self._config_entry.options.get(
                             CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_SECONDS
                         ),
                     ): vol.All(vol.Coerce(int), vol.Range(min=60)),
                     vol.Required(
                         CONF_ENABLE_POWER_DATA,
-                        default=self.config_entry.options.get(
+                        default=self._config_entry.options.get(
                             CONF_ENABLE_POWER_DATA, DEFAULT_ENABLE_POWER_DATA
                         ),
                     ): bool,
                     vol.Required(
                         CONF_PRIMARY_LOAD_LABEL,
-                        default=self.config_entry.options.get(
+                        default=self._config_entry.options.get(
                             CONF_PRIMARY_LOAD_LABEL, DEFAULT_PRIMARY_LOAD_LABEL
                         ),
                     ): str,
