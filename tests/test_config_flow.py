@@ -8,6 +8,7 @@ pytest.importorskip("homeassistant")
 
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
+
 from custom_components.catchsolar.config_flow import CatchSolarConfigFlow
 from custom_components.catchsolar.const import (
     CONF_ACCOUNT_ID,

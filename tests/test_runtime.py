@@ -8,8 +8,9 @@ import pytest
 
 pytest.importorskip("homeassistant")
 
-from custom_components.catchsolar.runtime import PrimaryLoadRuntimeTracker, RuntimeState
 from homeassistant.util import dt as dt_util
+
+from custom_components.catchsolar.runtime import PrimaryLoadRuntimeTracker, RuntimeState
 
 
 class _MemoryStore:

@@ -84,7 +84,11 @@ def test_load_state_binary_sensor_reads_primary_device_state() -> None:
 
 
 def test_power_sensor_exposes_raw_bucket_metadata() -> None:
-    entity = CatchSolarPowerSensor(_build_coordinator(), "total_consumption_power", "Monocle Total Consumption Power")
+    entity = CatchSolarPowerSensor(
+        _build_coordinator(),
+        "total_consumption_power",
+        "Monocle Total Consumption Power",
+    )
 
     assert entity.native_value is None
     assert entity.extra_state_attributes["series_key"] == "total_consumption_power"
