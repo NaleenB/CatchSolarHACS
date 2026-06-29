@@ -21,6 +21,10 @@ DEFAULT_ENABLE_POWER_DATA = True
 DEFAULT_PRIMARY_LOAD_LABEL = "Primary Load"
 DEFAULT_SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL_SECONDS)
 
+RUNTIME_SENSOR_24H = "runtime_24h"
+RUNTIME_SENSOR_7D_ROLLING = "runtime_7d_rolling"
+RUNTIME_SENSOR_TOTAL = "runtime_total"
+
 POWER_SERIES_MAP = {
     "Solar": "solar_power",
     "Total Consumption": "total_consumption_power",

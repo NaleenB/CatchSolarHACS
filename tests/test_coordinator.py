@@ -18,10 +18,12 @@ from custom_components.catchsolar.coordinator import CatchSolarDataUpdateCoordin
 async def test_coordinator_raises_auth_failed_for_auth_errors(hass) -> None:
     api = AsyncMock()
     api.async_get_locations.side_effect = CatchSolarApiAuthError("bad credentials")
+    runtime_tracker = AsyncMock()
     coordinator = CatchSolarDataUpdateCoordinator(
         hass,
         api,
         {CONF_LOCATION_ID: 1234, CONF_LOCATION_NAME: "Home"},
+        runtime_tracker,
     )
 
     with pytest.raises(ConfigEntryAuthFailed):
@@ -32,10 +34,12 @@ async def test_coordinator_raises_auth_failed_for_auth_errors(hass) -> None:
 async def test_coordinator_raises_update_failed_for_other_api_errors(hass) -> None:
     api = AsyncMock()
     api.async_get_locations.side_effect = CatchSolarApiError("timeout")
+    runtime_tracker = AsyncMock()
     coordinator = CatchSolarDataUpdateCoordinator(
         hass,
         api,
         {CONF_LOCATION_ID: 1234, CONF_LOCATION_NAME: "Home"},
+        runtime_tracker,
     )
 
     with pytest.raises(UpdateFailed):

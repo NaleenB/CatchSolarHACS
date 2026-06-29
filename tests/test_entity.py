@@ -8,15 +8,23 @@ pytest.importorskip("homeassistant")
 
 from custom_components.catchsolar.binary_sensor import CatchSolarLoadStateBinarySensor
 from custom_components.catchsolar.entity import CatchSolarCoordinatorEntity
-from custom_components.catchsolar.sensor import CatchSolarPowerSensor
+from custom_components.catchsolar.sensor import CatchSolarPowerSensor, CatchSolarPrimaryLoadRuntimeSensor
 
 
 def _build_coordinator() -> SimpleNamespace:
     return SimpleNamespace(
         data={
-            "location": {"id": 8382, "name": "Catch Solar 8382"},
+            "location": {"id": 8382, "name": "8382"},
             "primary_device_id": 3649,
             "last_polled_at": "2026-06-29T00:30:21+00:00",
+            "runtime": {
+                "runtime_24h_seconds": 8100,
+                "runtime_7d_rolling_seconds": 37800,
+                "runtime_total_seconds": 97200,
+                "current_interval_start": None,
+                "last_processed_at": "2026-06-29T00:30:21+00:00",
+                "primary_load_on": False,
+            },
             "power": {
                 "timestamp_ms": 1782685500000,
                 "series": {
@@ -42,7 +50,7 @@ def _build_coordinator() -> SimpleNamespace:
                 }
             ],
         },
-        config={},
+        config={"primary_load_label": "Water Heater"},
     )
 
 
@@ -77,3 +85,30 @@ def test_power_sensor_exposes_raw_bucket_metadata() -> None:
     assert entity.extra_state_attributes["latest_non_null_value"] == 0
     assert entity.extra_state_attributes["timestamp_local"] == "2026-06-29T08:25:00+10:00"
     assert entity.extra_state_attributes["last_polled_at"] == "2026-06-29T00:30:21+00:00"
+
+
+def test_device_info_uses_semantic_names_with_ids() -> None:
+    entity = CatchSolarCoordinatorEntity(_build_coordinator(), 3649)
+
+    assert entity.device_info["name"] == "Water Heater Relay 3649"
+
+
+def test_location_runtime_sensor_uses_hours_and_rounding() -> None:
+    entity = CatchSolarPrimaryLoadRuntimeSensor(
+        _build_coordinator(),
+        "runtime_total",
+        "Primary Load Runtime Total",
+    )
+
+    assert entity.native_value == 27.0
+    assert entity.extra_state_attributes["runtime_seconds"] == 97200
+
+
+def test_location_device_name_avoids_bare_numeric_name() -> None:
+    entity = CatchSolarPrimaryLoadRuntimeSensor(
+        _build_coordinator(),
+        "runtime_24h",
+        "Primary Load Runtime 24h",
+    )
+
+    assert entity.device_info["name"] == "Catch Solar Location 8382"

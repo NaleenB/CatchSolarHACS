@@ -13,7 +13,7 @@ from .entity import CatchSolarCoordinatorEntity, CatchSolarLocationEntity
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     entities: list[BinarySensorEntity] = [CatchSolarPrimaryLoadStateBinarySensor(coordinator)]
     for device in coordinator.data.get("devices", []):
         device_id = device.get("id")

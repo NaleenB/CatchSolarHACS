@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Catch Solar icon">
+  <rect width="256" height="256" rx="56" fill="#1c1c1c"/>
+  <path
+    d="M128 42c-30.6 0-58 16.7-72.3 43.1l19.5 10.6C85.7 76.6 105.8 64 128 64c32 0 58.5 25.9 60.9 57.9H160v22h28.9c-2.4 32-28.9 57.9-60.9 57.9-22.2 0-42.3-12.6-52.8-31.7l-19.5 10.6C70 207.3 97.4 224 128 224c50.8 0 92-41.2 92-92s-41.2-90-92-90Z"
+    fill="#ffffff"
+  />
+  <circle cx="128" cy="132" r="26" fill="#ffffff"/>
+</svg>
