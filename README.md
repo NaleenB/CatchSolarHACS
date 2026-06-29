@@ -47,24 +47,14 @@ The Monocle power sensors in this integration expose raw upstream `data24` bucke
 
 ## Installation
 
-Private bootstrap phase:
-
-1. In HACS, add this repo as a custom repository.
-2. Category: `Integration`
-3. Install `Catch Solar HACS`
-4. Restart Home Assistant
-5. Add the integration from Settings -> Devices & Services
-
-Validated on 2026-06-29 with Home Assistant OS `2026.6.4` and HACS `2.0.5`:
-
-1. Open `HACS`.
-2. Install or update `Catch Solar HACS`.
+1. In HACS, add this repo as a custom repository (URL: `https://github.com/NaleenB/CatchSolarHACS`, Category: `Integration`).
+2. Install `Catch Solar HACS`.
 3. Restart Home Assistant when HACS prompts for it.
-4. Go to `Settings -> Devices & Services`.
-5. Click `Add integration`.
-6. Search for `Catch Solar`.
-7. Enter your Catch Solar / Monocle username and password.
-8. Select the location if Home Assistant offers more than one.
+4. Go to `Settings -> Devices & Services`, click `Add integration`, search for `Catch Solar`.
+5. Enter your Catch Solar / Monocle username and password.
+6. Select the location if Home Assistant offers more than one.
+
+Validated on 2026-06-29 with Home Assistant OS `2026.6.4` and HACS `2.0.5`.
 
 ## Uninstall / clean reinstall
 
@@ -108,7 +98,5 @@ The config flow:
   - `Total Consumption` can be `null` in the latest bucket
   - the current `undefined` series equals `Solar + Export/Import`
   - the power series do not align tightly enough with live HA sensors to be used as canonical power truth
-- Version status observed on 2026-06-29:
-  - repo manifest version: `0.1.4`
-  - published releases observed during the investigation included `v0.1.2`
-  - Home Assistant Integrations detail may lag until the browser is refreshed or Home Assistant reloads the updated integration code
+- Current version: `v0.1.5` (2026-06-29)
+- If migrating from a pre-HACS YAML-based Catch Solar setup, remove the old `command_line` sensor, `template` helpers, `utility_meter` helpers, `statistics` helpers, `integration` (Riemann sum) helpers, and any automations that reference them — the integration provides its own runtime sensors that replace all of these.
