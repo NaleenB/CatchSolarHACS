@@ -6,9 +6,16 @@ import pytest
 
 pytest.importorskip("homeassistant")
 
-from custom_components.catchsolar.binary_sensor import CatchSolarLoadStateBinarySensor
+from custom_components.catchsolar.binary_sensor import (
+    CatchSolarLoadStateBinarySensor,
+    CatchSolarPrimaryLoadStateBinarySensor,
+)
 from custom_components.catchsolar.entity import CatchSolarCoordinatorEntity
-from custom_components.catchsolar.sensor import CatchSolarPowerSensor, CatchSolarPrimaryLoadRuntimeSensor
+from custom_components.catchsolar.sensor import (
+    CatchSolarPowerSensor,
+    CatchSolarPrimaryLoadRuntimeSensor,
+    CatchSolarPrimaryLoadStateRawSensor,
+)
 
 
 def _build_coordinator() -> SimpleNamespace:
@@ -112,3 +119,13 @@ def test_location_device_name_avoids_bare_numeric_name() -> None:
     )
 
     assert entity.device_info["name"] == "Catch Solar Location 8382"
+
+
+def test_primary_location_entities_use_primary_load_label() -> None:
+    coordinator = _build_coordinator()
+
+    raw_sensor = CatchSolarPrimaryLoadStateRawSensor(coordinator)
+    binary_sensor = CatchSolarPrimaryLoadStateBinarySensor(coordinator)
+
+    assert raw_sensor.name == "Water Heater State Raw"
+    assert binary_sensor.name == "Water Heater State"

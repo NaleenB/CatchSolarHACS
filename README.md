@@ -98,6 +98,6 @@ The config flow:
   - the current `undefined` series equals `Solar + Export/Import`
   - the power series do not align tightly enough with live HA sensors to be used as canonical power truth
 - Version status observed on 2026-06-29:
-  - repo manifest version: `0.1.3`
+  - repo manifest version: `0.1.4`
   - published releases observed during the investigation included `v0.1.2`
   - Home Assistant Integrations detail may lag until the browser is refreshed or Home Assistant reloads the updated integration code

@@ -32,18 +32,18 @@ Last updated: 2026-06-29
 
 ## Current repo version status
 
-- `custom_components/catchsolar/manifest.json` is now `0.1.3` locally
-- `main` currently points at `3e5fa1c` until the local `0.1.3` work is committed and pushed
+- `custom_components/catchsolar/manifest.json` is now `0.1.4` locally
+- `main` currently includes the runtime and branding work plus a live-test fix for location entity setup
 - HACS currently reports:
   - `installed_version=v0.1.2`
   - `available_version=v0.1.2`
-- A real HACS reinstall test requires publishing the local `0.1.3` work first
+- The `v0.1.3` live install test exposed a location-entity setup regression; the fix is now staged locally as `0.1.4`
 
 ## Home Assistant side context
 
 - HACS had already installed the integration and later reported both installed and available version as `v0.1.2`.
 - The live config entry id is `01KW82PMQTTVX8AWT07PW40X49`.
-- The next validation step is: publish `0.1.3`, remove the existing Catch Solar config entry, reinstall from HACS, then verify the runtime sensors and naming cleanup live in Home Assistant.
+- The next validation step is: publish `0.1.4`, update from HACS, restart Home Assistant, and verify the runtime sensors and naming cleanup live in Home Assistant.
 
 ## Monocle `data24` findings
 

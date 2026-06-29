@@ -90,6 +90,13 @@ class CatchSolarLocationEntity(CoordinatorEntity):
         return self.coordinator.data.get("location", {})
 
     @property
+    def primary_load_label(self) -> str:
+        configured_label = self.coordinator.config.get(CONF_PRIMARY_LOAD_LABEL)
+        if isinstance(configured_label, str):
+            configured_label = configured_label.strip()
+        return configured_label or DEFAULT_PRIMARY_LOAD_LABEL
+
+    @property
     def primary_device_entry(self) -> dict[str, Any] | None:
         primary_device_id = self.coordinator.data.get("primary_device_id")
         for device in self.coordinator.data.get("devices", []):
