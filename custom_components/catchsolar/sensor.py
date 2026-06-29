@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, RUNTIME_SENSOR_24H, RUNTIME_SENSOR_7D_ROLLING, RUNTIME_SENSOR_TOTAL
+from .const import DOMAIN, RUNTIME_SENSOR_7D_ROLLING, RUNTIME_SENSOR_24H, RUNTIME_SENSOR_TOTAL
 from .entity import CatchSolarCoordinatorEntity, CatchSolarLocationEntity
 
 DEVICE_SENSOR_KEYS = {

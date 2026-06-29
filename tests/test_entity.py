@@ -21,8 +21,8 @@ from custom_components.catchsolar.sensor import (
 def _build_coordinator() -> SimpleNamespace:
     return SimpleNamespace(
         data={
-            "location": {"id": 8382, "name": "8382"},
-            "primary_device_id": 3649,
+            "location": {"id": 99999, "name": "99999"},
+            "primary_device_id": 88888,
             "last_polled_at": "2026-06-29T00:30:21+00:00",
             "runtime": {
                 "runtime_24h_seconds": 8100,
@@ -47,7 +47,7 @@ def _build_coordinator() -> SimpleNamespace:
             },
             "devices": [
                 {
-                    "id": 3649,
+                    "id": 88888,
                     "device_name": "Water Heater",
                     "device_type": "SR",
                     "serial_number": "ABC123",
@@ -62,10 +62,10 @@ def _build_coordinator() -> SimpleNamespace:
 
 
 def test_coordinator_entity_exposes_catchsolar_device_without_shadowing_core_properties() -> None:
-    entity = CatchSolarCoordinatorEntity(_build_coordinator(), 3649)
+    entity = CatchSolarCoordinatorEntity(_build_coordinator(), 88888)
 
     assert entity.catchsolar_device == {
-        "id": 3649,
+        "id": 88888,
         "device_name": "Water Heater",
         "device_type": "SR",
         "serial_number": "ABC123",
@@ -77,7 +77,7 @@ def test_coordinator_entity_exposes_catchsolar_device_without_shadowing_core_pro
 
 
 def test_load_state_binary_sensor_reads_primary_device_state() -> None:
-    entity = CatchSolarLoadStateBinarySensor(_build_coordinator(), 3649)
+    entity = CatchSolarLoadStateBinarySensor(_build_coordinator(), 88888)
 
     assert entity.is_on is True
     assert entity.extra_state_attributes["raw_load_state"] == 1
@@ -95,9 +95,9 @@ def test_power_sensor_exposes_raw_bucket_metadata() -> None:
 
 
 def test_device_info_uses_semantic_names_with_ids() -> None:
-    entity = CatchSolarCoordinatorEntity(_build_coordinator(), 3649)
+    entity = CatchSolarCoordinatorEntity(_build_coordinator(), 88888)
 
-    assert entity.device_info["name"] == "Water Heater Relay 3649"
+    assert entity.device_info["name"] == "Water Heater Relay 88888"
 
 
 def test_location_runtime_sensor_uses_hours_and_rounding() -> None:
@@ -118,7 +118,7 @@ def test_location_device_name_avoids_bare_numeric_name() -> None:
         "Primary Load Runtime 24h",
     )
 
-    assert entity.device_info["name"] == "Catch Solar Location 8382"
+    assert entity.device_info["name"] == "Catch Solar Location 99999"
 
 
 def test_primary_location_entities_use_primary_load_label() -> None:

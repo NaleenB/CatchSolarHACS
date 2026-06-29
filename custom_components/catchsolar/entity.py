@@ -78,7 +78,11 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
                 primary_load_label=self.primary_load_label,
             ),
             serial_number=device.get("serial_number"),
-            via_device=(DOMAIN, f"location_{via_location_id}") if via_location_id is not None else None,
+            via_device=(
+                (DOMAIN, f"location_{via_location_id}")
+                if via_location_id is not None
+                else None
+            ),
         )
 
 

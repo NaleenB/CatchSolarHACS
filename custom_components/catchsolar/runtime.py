@@ -104,7 +104,11 @@ class RuntimeState:
 
         current_interval_start = _parse_datetime(payload.get("current_interval_start"))
         last_processed_at = _parse_datetime(payload.get("last_processed_at"))
-        if current_interval_start and last_processed_at and current_interval_start > last_processed_at:
+        if (
+            current_interval_start
+            and last_processed_at
+            and current_interval_start > last_processed_at
+        ):
             last_processed_at = current_interval_start
 
         return cls(

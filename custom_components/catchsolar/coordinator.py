@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -10,7 +10,14 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .api import CatchSolarApiAuthError, CatchSolarApiClient, CatchSolarApiError
-from .const import CONF_ENABLE_POWER_DATA, CONF_LOCATION_ID, CONF_LOCATION_NAME, CONF_SCAN_INTERVAL, DEFAULT_ENABLE_POWER_DATA, DEFAULT_SCAN_INTERVAL_SECONDS
+from .const import (
+    CONF_ENABLE_POWER_DATA,
+    CONF_LOCATION_ID,
+    CONF_LOCATION_NAME,
+    CONF_SCAN_INTERVAL,
+    DEFAULT_ENABLE_POWER_DATA,
+    DEFAULT_SCAN_INTERVAL_SECONDS,
+)
 from .parsing import extract_latest_power_series, normalize_device_entry, pick_primary_device
 from .runtime import PrimaryLoadRuntimeTracker
 

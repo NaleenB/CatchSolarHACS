@@ -20,11 +20,11 @@ from custom_components.catchsolar.sensor import (
 async def test_sensor_setup_adds_runtime_sensors_once_at_location_scope() -> None:
     coordinator = SimpleNamespace(
         data={
-            "location": {"id": 8382, "name": "Home"},
-            "primary_device_id": 3649,
+            "location": {"id": 99999, "name": "Home"},
+            "primary_device_id": 88888,
             "devices": [
                 {
-                    "id": 3649,
+                    "id": 88888,
                     "device_name": "Water Heater",
                     "serial_number": "ABC123",
                     "device_type": "SR",
@@ -32,7 +32,7 @@ async def test_sensor_setup_adds_runtime_sensors_once_at_location_scope() -> Non
                     "online": 1,
                 },
                 {
-                    "id": 4001,
+                    "id": 77777,
                     "device_name": "Pool Pump",
                     "serial_number": "XYZ999",
                     "device_type": "SR",

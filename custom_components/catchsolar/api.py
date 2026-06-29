@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
+from json import JSONDecodeError
 from typing import Any
 
 from aiohttp import ClientError, ClientResponseError, ClientSession
-from json import JSONDecodeError
 
 from .const import API_BASE
 from .parsing import parse_locations
@@ -68,7 +67,7 @@ class CatchSolarApiClient:
             raise
         except ClientResponseError as err:
             raise CatchSolarApiError(f"HTTP error {err.status} for {path}") from err
-        except (ClientError, asyncio.TimeoutError, JSONDecodeError) as err:
+        except (TimeoutError, ClientError, JSONDecodeError) as err:
             raise CatchSolarApiError(f"Request failed for {path}") from err
 
     async def async_login(self) -> dict[str, Any]:

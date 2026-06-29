@@ -64,3 +64,13 @@ async def async_remove_config_entry_device(
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the Catch Solar component from configuration.yaml.
+
+    This integration is configured exclusively through the config flow (UI).
+    YAML-based setup is not supported — this stub exists so Home Assistant
+    does not log a warning about a missing setup function.
+    """
+    return True

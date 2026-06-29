@@ -11,6 +11,6 @@ testpaths = ["tests"]
 
 [tool.mypy]
 python_version = "3.13"
-files = ["custom_components/catchsolar/parsing.py", "tests"]
+files = ["custom_components/catchsolar", "tests"]
 strict = true
 warn_unused_configs = true
