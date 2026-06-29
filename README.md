@@ -55,6 +55,17 @@ Private bootstrap phase:
 4. Restart Home Assistant
 5. Add the integration from Settings -> Devices & Services
 
+Validated on 2026-06-29 with Home Assistant OS `2026.6.4` and HACS `2.0.5`:
+
+1. Open `HACS`.
+2. Install or update `Catch Solar HACS`.
+3. Restart Home Assistant when HACS prompts for it.
+4. Go to `Settings -> Devices & Services`.
+5. Click `Add integration`.
+6. Search for `Catch Solar`.
+7. Enter your Catch Solar / Monocle username and password.
+8. Select the location if Home Assistant offers more than one.
+
 ## Uninstall / clean reinstall
 
 For a clean reinstall, remove the Home Assistant config entry before removing the HACS package:
