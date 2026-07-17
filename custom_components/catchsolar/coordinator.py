@@ -21,6 +21,8 @@ from .const import (
 from .parsing import extract_latest_power_series, normalize_device_entry, pick_primary_device
 from .runtime import PrimaryLoadRuntimeTracker
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(
@@ -45,11 +47,9 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             location_id = int(self.config[CONF_LOCATION_ID])
             location_name = self.config.get(CONF_LOCATION_NAME)
-
-            locations = await self.api.async_get_locations()
-            location = next((item for item in locations if item.get("id") == location_id), None)
-            if location is None:
-                location = {"id": location_id, "name": location_name}
+            # The selected location is stored in the config entry. Do not make the
+            # primary-load state depend on a second, non-essential API request.
+            location = {"id": location_id, "name": location_name}
 
             devices = [
                 normalize_device_entry(item)
@@ -58,10 +58,17 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             power_data: dict[str, Any] | None = None
             if self.config.get(CONF_ENABLE_POWER_DATA, DEFAULT_ENABLE_POWER_DATA):
-                date_to = dt_util.now().isoformat(timespec="milliseconds")
-                power_data = extract_latest_power_series(
-                    await self.api.async_get_data24(location_id, date_to)
-                )
+                try:
+                    date_to = dt_util.now().isoformat(timespec="milliseconds")
+                    power_data = extract_latest_power_series(
+                        await self.api.async_get_data24(location_id, date_to)
+                    )
+                except CatchSolarApiAuthError:
+                    raise
+                except CatchSolarApiError as err:
+                    # data24 is diagnostic telemetry. A transient failure must
+                    # not make the load-state binary sensor unavailable.
+                    _LOGGER.debug("Unable to refresh optional Monocle power data: %s", err)
 
             primary_device = pick_primary_device(devices) or {}
             primary_load_state = primary_device.get("load_state")
