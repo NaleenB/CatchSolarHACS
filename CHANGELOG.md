@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.7 — 2026-07-18
+
+- Keep primary-load state available when location metadata or optional `data24`
+  telemetry cannot be refreshed
+- Restrict primary-load unavailability to failures of the actual device-state
+  request
+
 ## 0.1.5 — 2026-06-29
 
 - Add `icon.png` and `logo.png` for integration branding

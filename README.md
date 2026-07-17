@@ -96,6 +96,7 @@ After setup, click **Configure** on the Catch Solar integration tile to adjust:
 ## Notes
 
 - The integration uses the Monocle REST API at `https://monocle0.edde.world`. All requests go directly from your Home Assistant instance to that API.
+- Primary-load state refreshes rely only on the device-state endpoint. Location metadata and optional 24-hour power telemetry failures do not make the load state unavailable.
 - Polling interval and 24-hour power data are configurable in the integration options (see [Options](#options)).
 - The runtime sensors use hours as their native unit and round to 2 decimal places.
 - `Primary Load Runtime 24h` means local-calendar-day runtime since midnight, even though the entity name uses `24h`.
