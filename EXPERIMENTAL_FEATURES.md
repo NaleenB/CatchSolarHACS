@@ -4,10 +4,10 @@ This register isolates the features introduced for Catch Solar `0.2.0`. They
 do not participate in primary-load polling or runtime tracking and can be
 disabled together without removing the integration.
 
-| Feature ID | Home Assistant option | Runtime component | Entities | Introduced |
-|---|---|---|---|---|
-| `live_socketio_telemetry` | `enable_live_data` | `live_coordinator` / `live_client` | `Live *` site, actor, and channel sensors | `0.2.0` |
-| `daily_energy_meters` | `enable_daily_energy` | `daily_energy_coordinator` | Five `Daily *` energy sensors | `0.2.0` |
+| Feature ID | Home Assistant option | Default | Runtime component | Entities | Introduced |
+|---|---|---|---|---|---|
+| `live_socketio_telemetry` | `enable_live_data` | Off | `live_coordinator` / `live_client` | `Live *` site, actor, and channel sensors | `0.2.0` |
+| `daily_energy_meters` | `enable_daily_energy` | Off | `daily_energy_coordinator` | Five `Daily *` energy sensors | `0.2.0` |
 
 The same IDs, enabled state, loaded state, and last-update result are included
 in Home Assistant's downloadable integration diagnostics under

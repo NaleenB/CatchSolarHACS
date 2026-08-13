@@ -11,7 +11,7 @@
   the upstream live event exposes them.
 - Keep live and daily-energy availability independent from the existing
   primary-load polling and persisted runtime tracking.
-- Add separate options for live telemetry and daily energy.
+- Add separate, default-off options for live telemetry and daily energy.
 - Register both additions as experimental features in diagnostics and document
   their immediate-disable and permanent-removal boundaries.
 - Credit Smatch Solar's MIT-licensed protocol work in

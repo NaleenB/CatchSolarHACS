@@ -112,13 +112,13 @@ After setup, click **Configure** on the Catch Solar integration tile to adjust:
 |---|---|---|
 | **Scan interval** | 600 seconds | How often Home Assistant polls the Monocle API |
 | **Enable power data** | On | Whether to fetch 24h Monocle power-series data (disable to reduce API calls) |
-| **Enable live data** | On | Whether to subscribe to the read-only Socket.IO event stream |
-| **Enable daily energy** | On | Whether to poll local-day energy totals every 60 seconds |
+| **Enable live data** | Off | Whether to subscribe to the read-only Socket.IO event stream |
+| **Enable daily energy** | Off | Whether to poll local-day energy totals every 60 seconds |
 | **Primary load label** | `Primary Load` | A semantic name for your controlled load (e.g. `Water Heater`, `Pool Pump`). This label is used in entity and device names so you can identify them easily |
 
 ### Experimental feature rollback
 
-Live telemetry and daily energy are tracked as experimental features. To stop
+Live telemetry and daily energy are opt-in experimental features. To stop
 them immediately without affecting primary-load state or runtime tracking,
 turn off both corresponding options and submit the form. The integration
 reloads automatically and stops their network activity.
