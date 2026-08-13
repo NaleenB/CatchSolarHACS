@@ -12,6 +12,13 @@
 - Keep live and daily-energy availability independent from the existing
   primary-load polling and persisted runtime tracking.
 - Add separate, default-off options for live telemetry and daily energy.
+- Remove the obsolete `/data/data24` client, parser, option, tests, and three
+  approximate Monocle power entities; migrate existing registry entries away.
+- Publish only the newest live snapshot every five seconds to reduce Recorder
+  and automation churn without reducing Socket.IO connection freshness.
+- Normalize solar and house power to positive magnitudes, discard unnamed
+  `undefined` channels, and deduplicate repeated channels.
+- Rename supplemental modules around their actual telemetry responsibility.
 - Register both additions as experimental features in diagnostics and document
   their immediate-disable and permanent-removal boundaries.
 - Credit Smatch Solar's MIT-licensed protocol work in

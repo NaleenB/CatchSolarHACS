@@ -1,7 +1,7 @@
-"""Experimental live-telemetry and daily-energy sensor boundary.
+"""Live-telemetry and daily-energy sensors.
 
-Keeping these entities outside sensor.py makes the 0.2.0 additions removable
-without disturbing the original primary-load, runtime, and data24 sensors.
+Keeping telemetry entities outside sensor.py keeps the core load-state and
+runtime platform small and makes the two data paths easy to reason about.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, LIVE_PUBLISH_INTERVAL_SECONDS
 from .entity import CatchSolarLocationEntity
 
 LIVE_SITE_POWER_SENSOR_KEYS = {
@@ -38,12 +38,12 @@ DAILY_ENERGY_SENSOR_KEYS = {
 }
 
 
-def setup_supplemental_sensors(
+def setup_telemetry_sensors(
     entry: ConfigEntry,
     integration_data: dict[str, Any],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up only the optional 0.2.0 live and daily-energy entities."""
+    """Set up the optional live and daily-energy entities."""
     entities: list[SensorEntity] = []
     daily_energy_coordinator = integration_data.get("daily_energy_coordinator")
     if daily_energy_coordinator is not None:
@@ -172,6 +172,8 @@ class CatchSolarLiveSiteSensor(CatchSolarLocationEntity, SensorEntity):
         attributes: dict[str, object] = {
             "source": "Catch Power Socket.IO event",
             "last_event_at": self.coordinator.data.get("last_event_at"),
+            "last_published_at": self.coordinator.data.get("last_published_at"),
+            "publish_interval_seconds": LIVE_PUBLISH_INTERVAL_SECONDS,
         }
         if self._key == "mains_power":
             attributes["sign_convention"] = "positive import, negative export"
@@ -291,4 +293,6 @@ class CatchSolarChannelPowerSensor(CatchSolarLocationEntity, SensorEntity):
             "channel_type": channel.get("type"),
             "source": "Catch Power Socket.IO event",
             "last_event_at": self.coordinator.data.get("last_event_at"),
+            "last_published_at": self.coordinator.data.get("last_published_at"),
+            "publish_interval_seconds": LIVE_PUBLISH_INTERVAL_SECONDS,
         }

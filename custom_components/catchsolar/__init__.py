@@ -3,6 +3,7 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import CatchSolarApiClient
@@ -19,10 +20,17 @@ from .const import (
 )
 from .coordinator import CatchSolarDataUpdateCoordinator
 from .runtime import PrimaryLoadRuntimeTracker
-from .supplemental import (
+from .telemetry import (
     CatchSolarDailyEnergyCoordinator,
     CatchSolarLiveClient,
     CatchSolarLiveCoordinator,
+)
+
+_REMOVED_ENTITY_UNIQUE_ID_TEMPLATES = (
+    "{location_id}_solar_power",
+    "{location_id}_total_consumption_power",
+    "{location_id}_export_import_power",
+    "{location_id}_channel_OTHER:undefined_live_power",
 )
 
 
@@ -112,6 +120,30 @@ async def async_remove_config_entry_device(
 ) -> bool:
     identifiers = {identifier for identifier in device_entry.identifiers if identifier[0] == DOMAIN}
     return bool(identifiers)
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Remove the retired data24 option and entity-registry entries."""
+    if entry.version >= 2:
+        return True
+
+    options = dict(entry.options)
+    options.pop("enable_power_data", None)
+
+    location_id = entry.data.get(CONF_LOCATION_ID)
+    if location_id is not None:
+        registry = er.async_get(hass)
+        for unique_id_template in _REMOVED_ENTITY_UNIQUE_ID_TEMPLATES:
+            entity_id = registry.async_get_entity_id(
+                "sensor",
+                DOMAIN,
+                unique_id_template.format(location_id=location_id),
+            )
+            if entity_id is not None:
+                registry.async_remove(entity_id)
+
+    hass.config_entries.async_update_entry(entry, options=options, version=2)
+    return True
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:

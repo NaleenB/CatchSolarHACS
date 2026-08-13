@@ -121,17 +121,6 @@ class CatchSolarApiClient:
             raise CatchSolarApiError("Invalid devices payload")
         return [item for item in payload if isinstance(item, dict)]
 
-    async def async_get_data24(self, location_id: int, date_to: str) -> dict[str, Any]:
-        payload = await self._request_json(
-            "POST",
-            "/data/data24",
-            json_payload={"locationId": location_id, "dateTo": date_to},
-            authenticated=True,
-        )
-        if not isinstance(payload, dict):
-            raise CatchSolarApiError("Invalid data24 payload")
-        return payload
-
     async def async_get_daily_energy(
         self,
         location_id: int,

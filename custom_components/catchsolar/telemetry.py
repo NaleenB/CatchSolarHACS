@@ -16,6 +16,7 @@ from .const import (
     API_BASE,
     DAILY_ENERGY_UPDATE_INTERVAL_SECONDS,
     LIVE_EVENT_STALE_SECONDS,
+    LIVE_PUBLISH_INTERVAL_SECONDS,
 )
 from .parsing import extract_daily_energy, extract_live_event
 
@@ -93,20 +94,25 @@ class CatchSolarLiveCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     ) -> None:
         super().__init__(hass, _LOGGER, name="Catch Solar live telemetry")
         self.config = config
+        self._location = {
+            "id": int(config["location_id"]),
+            "name": config.get("location_name"),
+        }
         self.data: dict[str, Any] = {
-            "location": {
-                "id": int(config["location_id"]),
-                "name": config.get("location_name"),
-            },
+            "location": dict(self._location),
             "site_power": {},
             "limits": {},
             "actors": [],
             "channels": [],
             "device_count": None,
             "last_event_at": None,
+            "last_published_at": None,
         }
         self.last_update_success = False
         self._stale_handle: asyncio.TimerHandle | None = None
+        self._publish_handle: asyncio.TimerHandle | None = None
+        self._pending_data: dict[str, Any] | None = None
+        self._last_publish_time: float | None = None
 
     async def async_handle_event(self, payload: Any) -> None:
         if not isinstance(payload, dict):
@@ -114,22 +120,65 @@ class CatchSolarLiveCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
 
         parsed = extract_live_event(payload)
-        parsed["location"] = dict(self.data["location"])
+        parsed["location"] = dict(self._location)
         parsed["last_event_at"] = dt_util.utcnow().isoformat()
-        self.async_set_updated_data(parsed)
         self._schedule_stale_check()
+        self._queue_for_publication(parsed)
 
     async def async_handle_disconnect(self) -> None:
         self._cancel_stale_check()
+        self._cancel_publication()
         self.async_set_update_error(UpdateFailed("Catch Solar live connection is offline"))
 
     async def async_shutdown(self) -> None:
         self._cancel_stale_check()
+        self._cancel_publication()
         await super().async_shutdown()
 
     async def async_stop_live(self) -> None:
         self._cancel_stale_check()
+        self._cancel_publication()
         self.async_set_update_error(UpdateFailed("Catch Solar live connection stopped"))
+
+    def _queue_for_publication(self, data: dict[str, Any]) -> None:
+        """Publish the newest live snapshot no more than once every five seconds."""
+        now = self.hass.loop.time()
+        if self._last_publish_time is None or not self.last_update_success:
+            self._publish(data, now)
+            return
+
+        elapsed = now - self._last_publish_time
+        if elapsed >= LIVE_PUBLISH_INTERVAL_SECONDS:
+            self._publish(data, now)
+            return
+
+        self._pending_data = data
+        if self._publish_handle is None:
+            self._publish_handle = self.hass.loop.call_later(
+                LIVE_PUBLISH_INTERVAL_SECONDS - elapsed,
+                self._publish_pending,
+            )
+
+    def _publish_pending(self) -> None:
+        self._publish_handle = None
+        if self._pending_data is not None:
+            self._publish(self._pending_data, self.hass.loop.time())
+
+    def _publish(self, data: dict[str, Any], published_at: float) -> None:
+        self._cancel_publish_handle()
+        self._pending_data = None
+        self._last_publish_time = published_at
+        data["last_published_at"] = dt_util.utcnow().isoformat()
+        self.async_set_updated_data(data)
+
+    def _cancel_publish_handle(self) -> None:
+        if self._publish_handle is not None:
+            self._publish_handle.cancel()
+            self._publish_handle = None
+
+    def _cancel_publication(self) -> None:
+        self._cancel_publish_handle()
+        self._pending_data = None
 
     def _schedule_stale_check(self) -> None:
         self._cancel_stale_check()
@@ -145,6 +194,7 @@ class CatchSolarLiveCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _mark_stale(self) -> None:
         self._stale_handle = None
+        self._cancel_publication()
         self.async_set_update_error(
             UpdateFailed(
                 f"No Catch Solar live event received for {LIVE_EVENT_STALE_SECONDS} seconds"

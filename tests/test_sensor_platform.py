@@ -9,7 +9,6 @@ pytest.importorskip("homeassistant")
 from custom_components.catchsolar.const import DOMAIN
 from custom_components.catchsolar.sensor import (
     CatchSolarDeviceMetadataSensor,
-    CatchSolarPowerSensor,
     CatchSolarPrimaryLoadRuntimeSensor,
     CatchSolarPrimaryLoadStateRawSensor,
     async_setup_entry,
@@ -40,13 +39,6 @@ async def test_sensor_setup_adds_runtime_sensors_once_at_location_scope() -> Non
                     "online": 1,
                 },
             ],
-            "power": {
-                "series": {
-                    "solar_power": 1,
-                    "total_consumption_power": 2,
-                    "export_import_power": 3,
-                }
-            },
             "runtime": {
                 "runtime_24h_seconds": 1,
                 "runtime_7d_rolling_seconds": 2,
@@ -67,4 +59,3 @@ async def test_sensor_setup_adds_runtime_sensors_once_at_location_scope() -> Non
     assert sum(isinstance(entity, CatchSolarPrimaryLoadStateRawSensor) for entity in added) == 1
     assert sum(isinstance(entity, CatchSolarPrimaryLoadRuntimeSensor) for entity in added) == 3
     assert sum(isinstance(entity, CatchSolarDeviceMetadataSensor) for entity in added) == 16
-    assert sum(isinstance(entity, CatchSolarPowerSensor) for entity in added) == 3
