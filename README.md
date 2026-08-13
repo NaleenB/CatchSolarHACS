@@ -49,7 +49,7 @@ On the location device you will find:
 - **Live Solar Power** — current solar-generation magnitude
 - **Live House Power** — current upstream household-load value
 - **Live Battery Power** — raw upstream battery value, when available
-- **Live Import Limit / Live Export Limit** — current site limits, when supplied
+- **Live Import Limit / Live Active Control** — current upstream control values, when supplied
 - **Daily Solar Yield**, **Daily Grid Import**, **Daily Grid Export**, **Daily
   House Consumption**, and **Daily Consumed Solar** — cumulative local-day kWh
   meters suitable for Home Assistant's Energy Dashboard

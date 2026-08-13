@@ -18,6 +18,8 @@
   and automation churn without reducing Socket.IO connection freshness.
 - Poll optional daily-energy totals every five minutes instead of every minute
   to reduce load on the unofficial endpoint.
+- Shut down daily-energy polling during unloads and rename the unverified
+  `activeControlW` sensor to **Live Active Control**.
 - Normalize solar and house power to positive magnitudes, discard unnamed
   `undefined` channels, and deduplicate repeated channels.
 - Rename supplemental modules around their actual telemetry responsibility.

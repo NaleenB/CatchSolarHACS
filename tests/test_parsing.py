@@ -135,7 +135,7 @@ def test_extract_live_event_discovers_site_actor_and_channel_values() -> None:
         "house_power": 3950.0,
         "battery_power": 0.0,
     }
-    assert result["limits"] == {"import_limit": 15000.0, "export_limit": 5000.0}
+    assert result["limits"] == {"import_limit": 15000.0, "active_control": -5000.0}
     assert result["actors"][0]["class"] == "OTHER"
     assert result["actors"][0]["state"] == "ON"
     assert result["actors"][1]["soc"] == 73.0

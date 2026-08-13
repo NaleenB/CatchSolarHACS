@@ -101,7 +101,7 @@ def extract_live_event(payload: dict[str, Any]) -> dict[str, Any]:
     active_control = _number(csip.get("activeControlW"))
     limits = {
         "import_limit": _number(csip.get("activeImportW")),
-        "export_limit": abs(active_control) if active_control is not None else None,
+        "active_control": active_control,
     }
 
     actors: list[dict[str, Any]] = []

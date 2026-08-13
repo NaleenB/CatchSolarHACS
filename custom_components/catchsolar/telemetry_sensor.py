@@ -26,7 +26,7 @@ LIVE_SITE_POWER_SENSOR_KEYS = {
 
 LIVE_LIMIT_SENSOR_KEYS = {
     "import_limit": "Live Import Limit",
-    "export_limit": "Live Export Limit",
+    "active_control": "Live Active Control",
 }
 
 DAILY_ENERGY_SENSOR_KEYS = {

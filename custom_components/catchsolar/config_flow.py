@@ -26,7 +26,7 @@ from .const import (
 
 
 class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 2
+    VERSION = 3
 
     def __init__(self) -> None:
         self._account_id: int | None = None
