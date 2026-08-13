@@ -110,7 +110,7 @@ After setup, click **Configure** on the Catch Solar integration tile to adjust:
 |---|---|---|
 | **Scan interval** | 600 seconds | How often Home Assistant polls device and primary-load state |
 | **Enable live data** | Off | Whether to subscribe to the read-only Socket.IO event stream |
-| **Enable daily energy** | Off | Whether to poll local-day energy totals every 60 seconds |
+| **Enable daily energy** | Off | Whether to poll local-day energy totals every 300 seconds |
 | **Primary load label** | `Primary Load` | A semantic name for your controlled load (e.g. `Water Heater`, `Pool Pump`). This label is used in entity and device names so you can identify them easily |
 
 ### Experimental feature rollback
@@ -142,6 +142,15 @@ Home Assistant handle that daily reset when building long-term statistics.
 - The integration uses the Monocle REST API at `https://monocle0.edde.world`. All requests go directly from your Home Assistant instance to that API.
 - Primary-load state refreshes rely only on the device-state endpoint. Live and daily-energy failures do not make the load state unavailable.
 - The polling interval applies only to device and primary-load state; live telemetry is pushed by Catch and published to Home Assistant every five seconds.
+- Daily-energy totals are polled every five minutes while that optional feature
+  is enabled; the upstream totals change slowly and this limits API traffic.
+- Dynamic live entities are registered the first time their upstream value is
+  seen. If a device, limit, or channel disappears temporarily, Home Assistant
+  keeps the entity and marks it unavailable; it becomes available again if the
+  item reappears.
+- Live channel entities use the upstream channel type and name as their
+  identity because the feed provides no stable channel ID. Repeated entries
+  with the same identity use the last value in the event.
 - The runtime sensors use hours as their native unit and round to 2 decimal places.
 - `Primary Load Runtime 24h` means local-calendar-day runtime since midnight, even though the entity name uses `24h`.
 - Runtime state is persisted by the integration and survives restarts, including the case where the primary load stays on across a restart.

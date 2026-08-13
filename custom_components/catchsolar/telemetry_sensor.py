@@ -61,6 +61,9 @@ def setup_telemetry_sensors(
     if live_coordinator is None:
         return
 
+    # Keep discovered keys for the integration lifetime. Dynamic entities are
+    # registered once, become unavailable when absent from a later payload,
+    # and reuse the same entity when the upstream item reappears.
     seen: set[str] = set()
 
     def _discover_live_entities() -> None:

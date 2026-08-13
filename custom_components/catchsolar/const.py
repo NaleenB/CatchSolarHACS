@@ -49,7 +49,8 @@ EXPERIMENTAL_FEATURES: dict[str, ExperimentalFeature] = {
     },
 }
 
-DAILY_ENERGY_UPDATE_INTERVAL_SECONDS = 60
+# Daily totals change slowly; keep unofficial API traffic modest.
+DAILY_ENERGY_UPDATE_INTERVAL_SECONDS = 300
 LIVE_PUBLISH_INTERVAL_SECONDS = 5
 LIVE_EVENT_STALE_SECONDS = 30
 

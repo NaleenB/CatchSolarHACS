@@ -90,7 +90,7 @@ def test_extract_live_event_discovers_site_actor_and_channel_values() -> None:
             "channels": [
                 {
                     "channelName": "Hot Water",
-                    "channelPWR": 3600,
+                    "channelPWR": 3700,
                     "channelType": "LOAD",
                 },
                 {

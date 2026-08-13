@@ -16,6 +16,8 @@
   approximate Monocle power entities; migrate existing registry entries away.
 - Publish only the newest live snapshot every five seconds to reduce Recorder
   and automation churn without reducing Socket.IO connection freshness.
+- Poll optional daily-energy totals every five minutes instead of every minute
+  to reduce load on the unofficial endpoint.
 - Normalize solar and house power to positive magnitudes, discard unnamed
   `undefined` channels, and deduplicate repeated channels.
 - Rename supplemental modules around their actual telemetry responsibility.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -37,6 +38,8 @@ async def test_daily_energy_coordinator_parses_supported_meters(hass) -> None:
         api,
         {"location_id": 99999, "location_name": "Home"},
     )
+
+    assert coordinator.update_interval == timedelta(seconds=300)
 
     result = await coordinator._async_update_data()
 

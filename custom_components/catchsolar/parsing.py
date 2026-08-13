@@ -125,6 +125,9 @@ def extract_live_event(payload: dict[str, Any]) -> dict[str, Any]:
                     }
                 )
 
+    # Catch's channel payload has no stable upstream ID. Type and name are the
+    # only usable entity identity; if the upstream repeats that identity, keep
+    # the last value rather than creating unstable duplicate entities.
     channels_by_key: dict[str, dict[str, Any]] = {}
     raw_channels = payload.get("channels")
     if isinstance(raw_channels, list):
