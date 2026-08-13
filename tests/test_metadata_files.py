@@ -42,5 +42,5 @@ def test_experimental_feature_register_documents_rollback_boundary() -> None:
     assert "daily_energy_meters" in register
     assert "enable_live_data" in register
     assert "enable_daily_energy" in register
-    assert "supplemental_sensor.py" in register
+    assert "telemetry_sensor.py" in register
     assert "Immediate rollback" in register

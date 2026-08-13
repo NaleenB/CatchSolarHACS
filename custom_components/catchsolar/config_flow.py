@@ -11,7 +11,6 @@ from .const import (
     CONF_ACCOUNT_ID,
     CONF_ENABLE_DAILY_ENERGY,
     CONF_ENABLE_LIVE_DATA,
-    CONF_ENABLE_POWER_DATA,
     CONF_LOCATION_ID,
     CONF_LOCATION_NAME,
     CONF_PASSWORD,
@@ -20,7 +19,6 @@ from .const import (
     CONF_USERNAME,
     DEFAULT_ENABLE_DAILY_ENERGY,
     DEFAULT_ENABLE_LIVE_DATA,
-    DEFAULT_ENABLE_POWER_DATA,
     DEFAULT_PRIMARY_LOAD_LABEL,
     DEFAULT_SCAN_INTERVAL_SECONDS,
     DOMAIN,
@@ -28,7 +26,7 @@ from .const import (
 
 
 class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    VERSION = 2
 
     def __init__(self) -> None:
         self._account_id: int | None = None
@@ -112,7 +110,6 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
             options={
                 CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL_SECONDS,
-                CONF_ENABLE_POWER_DATA: DEFAULT_ENABLE_POWER_DATA,
                 CONF_ENABLE_LIVE_DATA: DEFAULT_ENABLE_LIVE_DATA,
                 CONF_ENABLE_DAILY_ENERGY: DEFAULT_ENABLE_DAILY_ENERGY,
                 CONF_PRIMARY_LOAD_LABEL: DEFAULT_PRIMARY_LOAD_LABEL,
@@ -190,12 +187,6 @@ class CatchSolarOptionsFlow(config_entries.OptionsFlow):
                             CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_SECONDS
                         ),
                     ): vol.All(vol.Coerce(int), vol.Range(min=60)),
-                    vol.Required(
-                        CONF_ENABLE_POWER_DATA,
-                        default=self._config_entry.options.get(
-                            CONF_ENABLE_POWER_DATA, DEFAULT_ENABLE_POWER_DATA
-                        ),
-                    ): bool,
                     vol.Required(
                         CONF_ENABLE_LIVE_DATA,
                         default=self._config_entry.options.get(

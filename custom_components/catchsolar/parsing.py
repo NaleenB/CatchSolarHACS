@@ -2,12 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-POWER_SERIES_MAP = {
-    "Solar": "solar_power",
-    "Total Consumption": "total_consumption_power",
-    "Export/Import": "export_import_power",
-}
-
 DAILY_ENERGY_SERIES_MAP = {
     "Solar": "solar_yield_energy",
     "Export": "grid_export_energy",
@@ -59,41 +53,6 @@ def pick_primary_device(devices: list[dict[str, Any]]) -> dict[str, Any] | None:
     return devices[0] if devices else None
 
 
-def _latest_non_null(values: list[Any]) -> float | int | None:
-    for value in reversed(values):
-        if value is not None:
-            return value
-    return None
-
-
-def extract_latest_power_series(payload: dict[str, Any]) -> dict[str, Any]:
-    result = payload.get("result")
-    if not isinstance(result, dict):
-        return {"timestamp_ms": None, "series": {}, "latest_non_null_series": {}}
-
-    x_axis = result.get("xAxis")
-    timestamp_ms = x_axis[-1] if isinstance(x_axis, list) and x_axis else None
-
-    extracted: dict[str, Any] = {}
-    latest_non_null_series: dict[str, Any] = {}
-    for series in result.get("seriesList", []):
-        if not isinstance(series, dict):
-            continue
-        name = series.get("name")
-        key = POWER_SERIES_MAP.get(name)
-        data = series.get("data")
-        if key is None or not isinstance(data, list):
-            continue
-        extracted[key] = data[-1] if data else None
-        latest_non_null_series[key] = _latest_non_null(data)
-
-    return {
-        "timestamp_ms": timestamp_ms,
-        "series": extracted,
-        "latest_non_null_series": latest_non_null_series,
-    }
-
-
 def _number(value: Any) -> float | None:
     if value is None or isinstance(value, bool):
         return None
@@ -132,6 +91,9 @@ def extract_live_event(payload: dict[str, Any]) -> dict[str, Any]:
     site_power = {
         target: _number(payload.get(source)) for source, target in LIVE_SITE_POWER_MAP.items()
     }
+    for key in ("solar_power", "house_power"):
+        if site_power[key] is not None:
+            site_power[key] = abs(site_power[key])
 
     csip = payload.get("csip")
     if not isinstance(csip, dict):
@@ -163,7 +125,7 @@ def extract_live_event(payload: dict[str, Any]) -> dict[str, Any]:
                     }
                 )
 
-    channels: list[dict[str, Any]] = []
+    channels_by_key: dict[str, dict[str, Any]] = {}
     raw_channels = payload.get("channels")
     if isinstance(raw_channels, list):
         for item in raw_channels:
@@ -171,21 +133,22 @@ def extract_live_event(payload: dict[str, Any]) -> dict[str, Any]:
                 continue
             name = str(item.get("channelName") or "").strip()
             channel_type = str(item.get("channelType") or "").strip()
+            if name.casefold() == "undefined" or channel_type.casefold() == "undefined":
+                continue
             if not name and not channel_type:
                 continue
-            channels.append(
-                {
-                    "key": f"{channel_type}:{name}",
-                    "name": name or channel_type,
-                    "type": channel_type,
-                    "power": _number(item.get("channelPWR")),
-                }
-            )
+            key = f"{channel_type}:{name}"
+            channels_by_key[key] = {
+                "key": key,
+                "name": name or channel_type,
+                "type": channel_type,
+                "power": _number(item.get("channelPWR")),
+            }
 
     return {
         "site_power": site_power,
         "limits": limits,
         "actors": actors,
-        "channels": channels,
+        "channels": list(channels_by_key.values()),
         "device_count": payload.get("deviceCount"),
     }

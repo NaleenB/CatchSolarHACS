@@ -11,7 +11,6 @@ MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(MODULE)
 
-extract_latest_power_series = MODULE.extract_latest_power_series
 extract_daily_energy = MODULE.extract_daily_energy
 extract_live_event = MODULE.extract_live_event
 normalize_device_entry = MODULE.normalize_device_entry
@@ -56,35 +55,6 @@ def test_parse_locations_ignores_invalid_result_shape() -> None:
     assert parse_locations({"result": "invalid"}) == []
 
 
-def test_extract_latest_power_series() -> None:
-    payload = _load_fixture("data24.json")
-    result = extract_latest_power_series(payload)
-    assert result["timestamp_ms"] == 1782646500000
-    assert result["series"]["solar_power"] == 1200
-    assert result["series"]["total_consumption_power"] == 900
-    assert result["series"]["export_import_power"] == 300
-    assert result["latest_non_null_series"]["solar_power"] == 1200
-    assert "undefined" not in result["series"]
-
-
-def test_extract_latest_power_series_keeps_latest_value_and_tracks_non_null_fallback() -> None:
-    payload = {
-        "result": {
-            "xAxis": [1, 2, 3],
-            "seriesList": [
-                {"name": "Solar", "data": [1000, None, None]},
-                {"name": "Total Consumption", "data": [None, 800, None]},
-            ],
-        }
-    }
-    result = extract_latest_power_series(payload)
-    assert result["timestamp_ms"] == 3
-    assert result["series"]["solar_power"] is None
-    assert result["series"]["total_consumption_power"] is None
-    assert result["latest_non_null_series"]["solar_power"] == 1000
-    assert result["latest_non_null_series"]["total_consumption_power"] == 800
-
-
 def test_extract_daily_energy_converts_signed_wh_totals_to_positive_kwh() -> None:
     result = extract_daily_energy(
         {
@@ -114,7 +84,7 @@ def test_extract_live_event_discovers_site_actor_and_channel_values() -> None:
     result = extract_live_event(
         {
             "mainsPWR": -250,
-            "solarPWR": 4200,
+            "solarPWR": -4200,
             "housePWR": 3950,
             "batteryPWR": 0,
             "channels": [
@@ -122,7 +92,17 @@ def test_extract_live_event_discovers_site_actor_and_channel_values() -> None:
                     "channelName": "Hot Water",
                     "channelPWR": 3600,
                     "channelType": "LOAD",
-                }
+                },
+                {
+                    "channelName": "Hot Water",
+                    "channelPWR": 3600,
+                    "channelType": "LOAD",
+                },
+                {
+                    "channelName": "undefined",
+                    "channelPWR": -11389,
+                    "channelType": "OTHER",
+                },
             ],
             "controllable": {
                 "OTHER": [

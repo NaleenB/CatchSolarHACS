@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("homeassistant")
 
-from custom_components.catchsolar.supplemental import (
+from custom_components.catchsolar.telemetry import (
     CatchSolarDailyEnergyCoordinator,
     CatchSolarLiveCoordinator,
 )
@@ -74,3 +74,29 @@ async def test_live_coordinator_updates_from_event_and_can_shutdown(hass) -> Non
 
     await coordinator.async_shutdown()
     assert coordinator._stale_handle is None
+
+
+@pytest.mark.asyncio
+async def test_live_coordinator_throttles_publication_to_latest_event(hass) -> None:
+    coordinator = CatchSolarLiveCoordinator(
+        hass,
+        {"location_id": 99999, "location_name": "Home"},
+    )
+
+    await coordinator.async_handle_event({"mainsPWR": -100})
+    first_published_at = coordinator.data["last_published_at"]
+    await coordinator.async_handle_event({"mainsPWR": -200})
+
+    assert coordinator.data["site_power"]["mains_power"] == -100
+    assert coordinator._pending_data is not None
+    assert coordinator._publish_handle is not None
+
+    coordinator._cancel_publish_handle()
+    coordinator._publish_pending()
+
+    assert coordinator.data["site_power"]["mains_power"] == -200
+    assert coordinator.data["last_published_at"] >= first_published_at
+    assert coordinator._pending_data is None
+
+    await coordinator.async_shutdown()
+    assert coordinator._publish_handle is None

@@ -11,7 +11,6 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.catchsolar.api import CatchSolarApiAuthError, CatchSolarApiError
 from custom_components.catchsolar.const import (
-    CONF_ENABLE_POWER_DATA,
     CONF_LOCATION_ID,
     CONF_LOCATION_NAME,
 )
@@ -69,7 +68,6 @@ async def test_coordinator_uses_configured_location_without_polling_locations(ha
         {
             CONF_LOCATION_ID: 1234,
             CONF_LOCATION_NAME: "Home",
-            CONF_ENABLE_POWER_DATA: False,
         },
         runtime_tracker,
     )
@@ -79,31 +77,3 @@ async def test_coordinator_uses_configured_location_without_polling_locations(ha
     assert data["location"] == {"id": 1234, "name": "Home"}
     assert data["devices"][0]["load_state"] == 1
     api.async_get_locations.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_coordinator_keeps_load_state_when_optional_power_data_fails(hass) -> None:
-    api = AsyncMock()
-    api.async_get_devices.return_value = [
-        {
-            "online": 1,
-            "loadState": 1,
-            "device": {"id": 123, "controllingLoad": 1},
-        }
-    ]
-    api.async_get_data24.side_effect = CatchSolarApiError("timeout")
-    snapshot = Mock(as_dict=Mock(return_value={"primary_load_on": True}))
-    runtime_tracker = AsyncMock()
-    runtime_tracker.async_process.return_value = snapshot
-    coordinator = CatchSolarDataUpdateCoordinator(
-        hass,
-        api,
-        {CONF_LOCATION_ID: 1234, CONF_LOCATION_NAME: "Home"},
-        runtime_tracker,
-    )
-
-    data = await coordinator._async_update_data()
-
-    assert data["devices"][0]["load_state"] == 1
-    assert data["power"] is None
-    runtime_tracker.async_process.assert_awaited_once()

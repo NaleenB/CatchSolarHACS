@@ -15,11 +15,10 @@ from custom_components.catchsolar.binary_sensor import (
 )
 from custom_components.catchsolar.entity import CatchSolarCoordinatorEntity
 from custom_components.catchsolar.sensor import (
-    CatchSolarPowerSensor,
     CatchSolarPrimaryLoadRuntimeSensor,
     CatchSolarPrimaryLoadStateRawSensor,
 )
-from custom_components.catchsolar.supplemental_sensor import (
+from custom_components.catchsolar.telemetry_sensor import (
     CatchSolarActorPowerSensor,
     CatchSolarActorSocSensor,
     CatchSolarActorStateSensor,
@@ -50,19 +49,6 @@ def _build_coordinator() -> SimpleNamespace:
                 "current_interval_start": None,
                 "last_processed_at": "2026-06-29T00:30:21+00:00",
                 "primary_load_on": False,
-            },
-            "power": {
-                "timestamp_ms": 1782685500000,
-                "series": {
-                    "solar_power": -2797.16,
-                    "total_consumption_power": None,
-                    "export_import_power": -41.12,
-                },
-                "latest_non_null_series": {
-                    "solar_power": -2797.16,
-                    "total_consumption_power": 0,
-                    "export_import_power": -41.12,
-                },
             },
             "devices": [
                 {
@@ -100,21 +86,6 @@ def test_load_state_binary_sensor_reads_primary_device_state() -> None:
 
     assert entity.is_on is True
     assert entity.extra_state_attributes["raw_load_state"] == 1
-
-
-def test_power_sensor_exposes_raw_bucket_metadata() -> None:
-    entity = CatchSolarPowerSensor(
-        _build_coordinator(),
-        "total_consumption_power",
-        "Monocle Total Consumption Power",
-    )
-
-    assert entity.native_value is None
-    assert entity.extra_state_attributes["series_key"] == "total_consumption_power"
-    assert entity.extra_state_attributes["series_resolution_seconds"] == 300
-    assert entity.extra_state_attributes["latest_non_null_value"] == 0
-    assert entity.extra_state_attributes["timestamp_local"] == "2026-06-29T08:25:00+10:00"
-    assert entity.extra_state_attributes["last_polled_at"] == "2026-06-29T00:30:21+00:00"
 
 
 def test_device_info_uses_semantic_names_with_ids() -> None:

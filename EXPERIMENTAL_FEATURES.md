@@ -30,9 +30,9 @@ the feature.
 
 The experimental implementation is deliberately grouped in these locations:
 
-- `custom_components/catchsolar/supplemental.py`: live client and supplemental
-  coordinators
-- `custom_components/catchsolar/supplemental_sensor.py`: all live and daily
+- `custom_components/catchsolar/telemetry.py`: live client, five-second
+  publication throttle, and telemetry coordinators
+- `custom_components/catchsolar/telemetry_sensor.py`: all live and daily
   entities and discovery
 - `custom_components/catchsolar/parsing.py`: functions named
   `extract_daily_energy` and `extract_live_event`, plus their private helpers
@@ -43,7 +43,7 @@ The experimental implementation is deliberately grouped in these locations:
 - `custom_components/catchsolar/const.py`, `config_flow.py`, `strings.json`, and
   `translations/en.json`: the two feature options and tracking metadata
 - `custom_components/catchsolar/manifest.json`: `python-socketio` dependency
-- `tests/test_supplemental.py`, the supplemental parser/entity tests, and the
+- `tests/test_telemetry.py`, the telemetry parser/entity tests, and the
   `0.2.0` documentation
 
 For a permanent removal, disable both options first, then revert the dedicated

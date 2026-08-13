@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfPower, UnitOfTime
+from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, RUNTIME_SENSOR_7D_ROLLING, RUNTIME_SENSOR_24H, RUNTIME_SENSOR_TOTAL
 from .entity import CatchSolarCoordinatorEntity, CatchSolarLocationEntity
-from .supplemental_sensor import setup_supplemental_sensors
+from .telemetry_sensor import setup_telemetry_sensors
 
 DEVICE_SENSOR_KEYS = {
     "load_state": "Load State Raw",
@@ -20,12 +19,6 @@ DEVICE_SENSOR_KEYS = {
     "controlling_load": "Controlling Load",
     "controlling_inverter": "Controlling Inverter",
     "impl_class": "Implementation Class",
-}
-
-POWER_SENSOR_KEYS = {
-    "solar_power": "Monocle Solar Power",
-    "total_consumption_power": "Monocle Total Consumption Power",
-    "export_import_power": "Monocle Export/Import Power",
 }
 
 
@@ -60,13 +53,8 @@ async def async_setup_entry(
         for key, name in DEVICE_SENSOR_KEYS.items():
             entities.append(CatchSolarDeviceMetadataSensor(coordinator, device_id, key, name))
 
-    power_data = (coordinator.data.get("power") or {}).get("series", {})
-    if power_data is not None:
-        for key, name in POWER_SENSOR_KEYS.items():
-            entities.append(CatchSolarPowerSensor(coordinator, key, name))
-
     async_add_entities(entities)
-    setup_supplemental_sensors(entry, integration_data, async_add_entities)
+    setup_telemetry_sensors(entry, integration_data, async_add_entities)
 
 
 class CatchSolarDeviceMetadataSensor(CatchSolarCoordinatorEntity, SensorEntity):
@@ -111,44 +99,6 @@ class CatchSolarPrimaryLoadStateRawSensor(CatchSolarLocationEntity, SensorEntity
         return {
             "primary_device_id": primary.get("id"),
             "primary_device_name": primary.get("device_name"),
-        }
-
-
-class CatchSolarPowerSensor(CatchSolarLocationEntity, SensorEntity):
-    _attr_has_entity_name = True
-    _attr_native_unit_of_measurement = UnitOfPower.WATT
-
-    def __init__(self, coordinator, key: str, name: str) -> None:
-        super().__init__(coordinator)
-        location_id = self.location_entry.get("id", "unknown")
-        self._key = key
-        self._attr_unique_id = f"{location_id}_{key}"
-        self._attr_name = name
-
-    @property
-    def native_value(self):
-        power = self.coordinator.data.get("power") or {}
-        return (power.get("series") or {}).get(self._key)
-
-    @property
-    def extra_state_attributes(self) -> dict[str, object]:
-        power = self.coordinator.data.get("power") or {}
-        timestamp_ms = power.get("timestamp_ms")
-        timestamp_local = None
-        if isinstance(timestamp_ms, (int, float)):
-            timestamp_local = dt_util.as_local(
-                dt_util.utc_from_timestamp(float(timestamp_ms) / 1000)
-            ).isoformat()
-
-        latest_non_null = (power.get("latest_non_null_series") or {}).get(self._key)
-
-        return {
-            "series_key": self._key,
-            "series_resolution_seconds": 300,
-            "timestamp_ms": timestamp_ms,
-            "timestamp_local": timestamp_local,
-            "latest_non_null_value": latest_non_null,
-            "last_polled_at": self.coordinator.data.get("last_polled_at"),
         }
 
 
