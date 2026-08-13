@@ -9,6 +9,8 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import CatchSolarApiAuthError, CatchSolarApiClient, CatchSolarApiError
 from .const import (
     CONF_ACCOUNT_ID,
+    CONF_ENABLE_DAILY_ENERGY,
+    CONF_ENABLE_LIVE_DATA,
     CONF_ENABLE_POWER_DATA,
     CONF_LOCATION_ID,
     CONF_LOCATION_NAME,
@@ -16,6 +18,8 @@ from .const import (
     CONF_PRIMARY_LOAD_LABEL,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
+    DEFAULT_ENABLE_DAILY_ENERGY,
+    DEFAULT_ENABLE_LIVE_DATA,
     DEFAULT_ENABLE_POWER_DATA,
     DEFAULT_PRIMARY_LOAD_LABEL,
     DEFAULT_SCAN_INTERVAL_SECONDS,
@@ -109,6 +113,8 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             options={
                 CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL_SECONDS,
                 CONF_ENABLE_POWER_DATA: DEFAULT_ENABLE_POWER_DATA,
+                CONF_ENABLE_LIVE_DATA: DEFAULT_ENABLE_LIVE_DATA,
+                CONF_ENABLE_DAILY_ENERGY: DEFAULT_ENABLE_DAILY_ENERGY,
                 CONF_PRIMARY_LOAD_LABEL: DEFAULT_PRIMARY_LOAD_LABEL,
             },
         )
@@ -188,6 +194,18 @@ class CatchSolarOptionsFlow(config_entries.OptionsFlow):
                         CONF_ENABLE_POWER_DATA,
                         default=self._config_entry.options.get(
                             CONF_ENABLE_POWER_DATA, DEFAULT_ENABLE_POWER_DATA
+                        ),
+                    ): bool,
+                    vol.Required(
+                        CONF_ENABLE_LIVE_DATA,
+                        default=self._config_entry.options.get(
+                            CONF_ENABLE_LIVE_DATA, DEFAULT_ENABLE_LIVE_DATA
+                        ),
+                    ): bool,
+                    vol.Required(
+                        CONF_ENABLE_DAILY_ENERGY,
+                        default=self._config_entry.options.get(
+                            CONF_ENABLE_DAILY_ENERGY, DEFAULT_ENABLE_DAILY_ENERGY
                         ),
                     ): bool,
                     vol.Required(

@@ -43,6 +43,8 @@
         "data": {
           "scan_interval": "Polling interval (seconds)",
           "enable_power_data": "Enable 24-hour power data",
+          "enable_live_data": "Enable live Socket.IO telemetry",
+          "enable_daily_energy": "Enable daily Energy Dashboard meters",
           "primary_load_label": "Primary load label"
         }
       }

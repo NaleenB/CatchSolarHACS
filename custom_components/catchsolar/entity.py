@@ -57,7 +57,8 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
 
     @property
     def primary_load_label(self) -> str:
-        configured_label = self.coordinator.config.get(CONF_PRIMARY_LOAD_LABEL)
+        config = getattr(self.coordinator, "config", {})
+        configured_label = config.get(CONF_PRIMARY_LOAD_LABEL)
         if isinstance(configured_label, str):
             configured_label = configured_label.strip()
         return configured_label or DEFAULT_PRIMARY_LOAD_LABEL
@@ -68,7 +69,7 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
         if device is None:
             return None
         via_location_id = self.location_entry.get("id")
-        return DeviceInfo(
+        device_info = DeviceInfo(
             identifiers={(DOMAIN, f"device_{device.get('id')}")},
             manufacturer="CATCH Power",
             model=device.get("device_type") or "Solar Relay",
@@ -78,12 +79,10 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
                 primary_load_label=self.primary_load_label,
             ),
             serial_number=device.get("serial_number"),
-            via_device=(
-                (DOMAIN, f"location_{via_location_id}")
-                if via_location_id is not None
-                else None
-            ),
         )
+        if via_location_id is not None:
+            device_info["via_device"] = (DOMAIN, f"location_{via_location_id}")
+        return device_info
 
 
 class CatchSolarLocationEntity(CoordinatorEntity):
@@ -95,7 +94,8 @@ class CatchSolarLocationEntity(CoordinatorEntity):
 
     @property
     def primary_load_label(self) -> str:
-        configured_label = self.coordinator.config.get(CONF_PRIMARY_LOAD_LABEL)
+        config = getattr(self.coordinator, "config", {})
+        configured_label = config.get(CONF_PRIMARY_LOAD_LABEL)
         if isinstance(configured_label, str):
             configured_label = configured_label.strip()
         return configured_label or DEFAULT_PRIMARY_LOAD_LABEL

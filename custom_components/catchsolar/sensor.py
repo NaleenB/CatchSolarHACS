@@ -9,6 +9,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, RUNTIME_SENSOR_7D_ROLLING, RUNTIME_SENSOR_24H, RUNTIME_SENSOR_TOTAL
 from .entity import CatchSolarCoordinatorEntity, CatchSolarLocationEntity
+from .supplemental_sensor import setup_supplemental_sensors
 
 DEVICE_SENSOR_KEYS = {
     "load_state": "Load State Raw",
@@ -31,7 +32,8 @@ POWER_SENSOR_KEYS = {
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    integration_data = hass.data[DOMAIN][entry.entry_id]
+    coordinator = integration_data["coordinator"]
     entities: list[SensorEntity] = [
         CatchSolarPrimaryLoadStateRawSensor(coordinator),
         CatchSolarPrimaryLoadRuntimeSensor(
@@ -64,6 +66,7 @@ async def async_setup_entry(
             entities.append(CatchSolarPowerSensor(coordinator, key, name))
 
     async_add_entities(entities)
+    setup_supplemental_sensors(entry, integration_data, async_add_entities)
 
 
 class CatchSolarDeviceMetadataSensor(CatchSolarCoordinatorEntity, SensorEntity):
