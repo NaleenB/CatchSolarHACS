@@ -9,23 +9,30 @@ This integration connects to the Monocle API through Home Assistant's guided set
 - **Primary load state** — a binary sensor that shows whether your controlled load (e.g. water heater) is currently on or off, suitable for automations and dashboards
 - **Runtime tracking** — three sensors that track how long your primary load has been running: today, the last 7 days, and all time since the integration was installed
 - **Device monitoring** — online/offline status and metadata for each Monocle relay device
-- **Power telemetry** — the latest 24-hour Monocle power-series values (approximate; see the [important warning](#important-warning) below)
+- **Live power telemetry** — optional near-real-time mains, solar, house,
+  battery, channel, and controllable-device values from Catch Power's
+  Socket.IO feed
+- **Energy Dashboard meters** — optional daily solar yield, grid import, grid
+  export, house consumption, and consumed-solar totals
 
 No credentials belong in this repository. You enter your Catch Solar username and password during the guided setup inside Home Assistant, and Home Assistant stores them securely in the config entry.
 
-## Important warning
+## Live-data note
 
-The Monocle power sensors expose raw upstream `data24` bucketed values only.
+Entities whose names start with **Live** use the Socket.IO stream used by the
+Catch app. The integration receives every event but publishes only the newest
+snapshot to Home Assistant once every five seconds. This keeps dashboards
+responsive while limiting Recorder growth and automation churn.
 
-- They are **not** directly usable as real-time household consumption, solar generation, or import/export truth.
-- Treat them as approximate diagnostic telemetry, not canonical live power sensors.
-- Do not assume one-to-one equivalence with inverter entities, utility-meter logic, or higher-frequency Home Assistant template or custom sensors.
-- **`loadState`** (the on/off state Catch Solar reports for each monitored electrical load) remains the reliable Catch Solar signal for automations such as water-heater state tracking.
-- The built-in runtime sensors are derived from the primary device `loadState`, not from Monocle power telemetry.
+The protocol is unofficial and reverse-engineered. Validate readings against
+your installation before using them for safety-critical or high-cost
+automations. `Live Mains Power` is positive while importing and negative while
+exporting; solar and house power are exposed as positive magnitudes.
 
 ## What you get after installing
 
-The integration creates two devices in Home Assistant:
+The integration initially creates two devices in Home Assistant and can add
+controllable-device sub-devices when the live feed reports them:
 
 | Device | What it represents |
 |---|---|
@@ -38,11 +45,16 @@ On the location device you will find:
 - **Primary Load Runtime 24h** — hours the load ran today (since midnight, local time)
 - **Primary Load Runtime 7d Rolling** — hours the load ran in the last 7 days
 - **Primary Load Runtime Total** — hours the load has run since the integration was installed
-- **Monocle Solar Power** — latest 24h solar power value from Monocle (approximate)
-- **Monocle Total Consumption Power** — latest 24h consumption value from Monocle (may be unavailable)
-- **Monocle Export/Import Power** — latest 24h grid export/import value from Monocle (approximate)
+- **Live Mains Power** — positive when importing and negative when exporting
+- **Live Solar Power** — current solar-generation magnitude
+- **Live House Power** — current upstream household-load value
+- **Live Battery Power** — raw upstream battery value, when available
+- **Live Import Limit / Live Active Control** — current upstream control values, when supplied
+- **Daily Solar Yield**, **Daily Grid Import**, **Daily Grid Export**, **Daily
+  House Consumption**, and **Daily Consumed Solar** — cumulative local-day kWh
+  meters suitable for Home Assistant's Energy Dashboard
 
-On each relay device you will find diagnostic sensors for load state, online status, serial number, and device type.
+On each relay device you will find diagnostic sensors for load state, online status, serial number, and device type. Live events can also create nested devices for controllable actors, with power, state, and battery state-of-charge entities only when those fields exist upstream. Live channel power entities remain on the location device because channels do not have stable upstream IDs.
 
 Runtime history starts when this integration begins tracking. It is persisted by the integration and survives Home Assistant restarts (including when the primary load stays on across a restart). Runtime history is **not** reconstructed from Recorder or history data.
 
@@ -57,7 +69,14 @@ Runtime history starts when this integration begins tracking. It is persisted by
 7. Enter your Catch Solar / Monocle username and password.
 8. If you have more than one location on your account, select the one you want to add.
 
-Validated on 2026-06-29 with Home Assistant OS `2026.6.4` and HACS `2.0.5`.
+Validated on 2026-08-13 with Home Assistant `2026.7.4` and HACS `2.0.5`.
+
+### Upgrading from 0.1.x
+
+Version 0.2 removes the old five-minute `/data/data24` chart feed and its three
+`Monocle * Power` entities. The config-entry migration automatically removes
+their obsolete option and entity-registry entries. Primary-load state, runtime
+history, devices, and entity IDs are preserved.
 
 ## Migrating from a manual YAML setup
 
@@ -89,23 +108,67 @@ After setup, click **Configure** on the Catch Solar integration tile to adjust:
 
 | Option | Default | Description |
 |---|---|---|
-| **Scan interval** | 600 seconds | How often Home Assistant polls the Monocle API |
-| **Enable power data** | On | Whether to fetch 24h Monocle power-series data (disable to reduce API calls) |
+| **Scan interval** | 600 seconds | How often Home Assistant polls device and primary-load state |
+| **Enable live data** | Off | Whether to subscribe to the read-only Socket.IO event stream |
+| **Enable daily energy** | Off | Whether to poll local-day energy totals every 300 seconds |
 | **Primary load label** | `Primary Load` | A semantic name for your controlled load (e.g. `Water Heater`, `Pool Pump`). This label is used in entity and device names so you can identify them easily |
+
+### Experimental feature rollback
+
+Live telemetry and daily energy are opt-in experimental features. To stop
+them immediately without affecting primary-load state or runtime tracking,
+turn off both corresponding options and submit the form. The integration
+reloads automatically and stops their network activity.
+
+The feature IDs, current enabled/loaded state, and latest update result appear
+in downloaded integration diagnostics. The complete code inventory and
+permanent-removal checklist are in
+[`EXPERIMENTAL_FEATURES.md`](EXPERIMENTAL_FEATURES.md).
+
+## Energy Dashboard setup
+
+After the new daily meters have received their first update, go to **Settings
+→ Dashboards → Energy → Configuration** and select:
+
+- Solar production: **Daily Solar Yield**
+- Grid consumption: **Daily Grid Import**
+- Return to grid: **Daily Grid Export**
+
+The meters reset at local midnight. Their `total_increasing` state class lets
+Home Assistant handle that daily reset when building long-term statistics.
 
 ## Notes
 
 - The integration uses the Monocle REST API at `https://monocle0.edde.world`. All requests go directly from your Home Assistant instance to that API.
-- Primary-load state refreshes rely only on the device-state endpoint. Location metadata and optional 24-hour power telemetry failures do not make the load state unavailable.
-- Polling interval and 24-hour power data are configurable in the integration options (see [Options](#options)).
+- Primary-load state refreshes rely only on the device-state endpoint. Live and daily-energy failures do not make the load state unavailable.
+- The polling interval applies only to device and primary-load state; live telemetry is pushed by Catch and published to Home Assistant every five seconds.
+- Daily-energy totals are polled every five minutes while that optional feature
+  is enabled; the upstream totals change slowly and this limits API traffic.
+- Dynamic live entities are registered the first time their upstream value is
+  seen. If a device, limit, or channel disappears temporarily, Home Assistant
+  keeps the entity and marks it unavailable; it becomes available again if the
+  item reappears.
+- Live channel entities use the upstream channel type and name as their
+  identity because the feed provides no stable channel ID. Repeated entries
+  with the same identity use the last value in the event.
 - The runtime sensors use hours as their native unit and round to 2 decimal places.
 - `Primary Load Runtime 24h` means local-calendar-day runtime since midnight, even though the entity name uses `24h`.
 - Runtime state is persisted by the integration and survives restarts, including the case where the primary load stays on across a restart.
-- A 60-second polling interval can still be useful: entity attributes include `last_polled_at` so Home Assistant shows successful refreshes even when the upstream 5-minute Monocle bucket has not changed yet.
 - Device names include identifiers for debugging (e.g. `Catch Solar Location 99999`, `Water Heater Relay 88888`) rather than bare numeric names.
 - If credentials expire or change, Home Assistant will prompt you for reauthentication through the config entry (no need to remove and re-add the integration).
 - Diagnostics are shareable: sensitive values such as usernames, passwords, and tokens are automatically redacted.
-- The Monocle `data24` feed advances in 5-minute steps, not second-by-second. It is upstream bucketed telemetry — the integration polls it, but the values reflect Monocle's aggregation, not live inverter readings.
+- Live and daily-energy failures are isolated: neither can make primary-load
+  state or runtime entities unavailable.
+- This integration is read-only. It does not register Catch Power override or
+  device-control services.
+
+## Acknowledgements
+
+Live Socket.IO telemetry, `/data/datakwh` energy support, and controllable
+device discovery were informed by
+[simonsays11/ha-smatch-solar](https://github.com/simonsays11/ha-smatch-solar).
+Its MIT notice is retained in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## License
 

@@ -27,7 +27,11 @@ class _MemoryStore:
 
 
 def _tracker(initial_data=None) -> PrimaryLoadRuntimeTracker:
-    tracker = PrimaryLoadRuntimeTracker(SimpleNamespace(), "test-entry")
+    hass = SimpleNamespace(
+        data={},
+        config=SimpleNamespace(config_dir="/tmp"),
+    )
+    tracker = PrimaryLoadRuntimeTracker(hass, "test-entry")
     tracker._store = _MemoryStore(initial_data)
     return tracker
 

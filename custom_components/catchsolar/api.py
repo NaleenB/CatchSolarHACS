@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from json import JSONDecodeError
 from typing import Any
 
@@ -23,6 +24,7 @@ class CatchSolarApiClient:
         self._username = username
         self._password = password
         self._token: str | None = None
+        self._login_lock = asyncio.Lock()
 
     async def _request_json(
         self,
@@ -71,17 +73,27 @@ class CatchSolarApiClient:
             raise CatchSolarApiError(f"Request failed for {path}") from err
 
     async def async_login(self) -> dict[str, Any]:
-        payload = await self._request_json(
-            "POST",
-            "/auth/login",
-            json_payload={"username": self._username, "password": self._password},
-            authenticated=False,
-            retry_auth=False,
-        )
-        if not isinstance(payload, dict) or "accessToken" not in payload:
+        async with self._login_lock:
+            payload = await self._request_json(
+                "POST",
+                "/auth/login",
+                json_payload={"username": self._username, "password": self._password},
+                authenticated=False,
+                retry_auth=False,
+            )
+            if not isinstance(payload, dict) or "accessToken" not in payload:
+                raise CatchSolarApiAuthError("Missing access token")
+            self._token = str(payload["accessToken"])
+            return payload
+
+    async def async_get_access_token(self, *, refresh: bool = False) -> str:
+        if refresh:
+            self._token = None
+        if self._token is None:
+            await self.async_login()
+        if self._token is None:
             raise CatchSolarApiAuthError("Missing access token")
-        self._token = str(payload["accessToken"])
-        return payload
+        return self._token
 
     async def async_get_locations(self) -> list[dict[str, Any]]:
         payload = await self._request_json(
@@ -109,13 +121,23 @@ class CatchSolarApiClient:
             raise CatchSolarApiError("Invalid devices payload")
         return [item for item in payload if isinstance(item, dict)]
 
-    async def async_get_data24(self, location_id: int, date_to: str) -> dict[str, Any]:
+    async def async_get_daily_energy(
+        self,
+        location_id: int,
+        date_from: str,
+        date_to: str,
+    ) -> dict[str, Any]:
         payload = await self._request_json(
             "POST",
-            "/data/data24",
-            json_payload={"locationId": location_id, "dateTo": date_to},
+            "/data/datakwh",
+            json_payload={
+                "locationId": location_id,
+                "dateFrom": date_from,
+                "dateTo": date_to,
+                "summaryLevel": "DAY",
+            },
             authenticated=True,
         )
         if not isinstance(payload, dict):
-            raise CatchSolarApiError("Invalid data24 payload")
+            raise CatchSolarApiError("Invalid datakwh payload")
         return payload

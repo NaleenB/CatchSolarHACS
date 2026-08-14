@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -12,14 +13,16 @@ from homeassistant.data_entry_flow import FlowResultType
 from custom_components.catchsolar.config_flow import CatchSolarConfigFlow
 from custom_components.catchsolar.const import (
     CONF_ACCOUNT_ID,
-    CONF_ENABLE_POWER_DATA,
+    CONF_ENABLE_DAILY_ENERGY,
+    CONF_ENABLE_LIVE_DATA,
     CONF_LOCATION_ID,
     CONF_LOCATION_NAME,
     CONF_PASSWORD,
     CONF_PRIMARY_LOAD_LABEL,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
-    DEFAULT_ENABLE_POWER_DATA,
+    DEFAULT_ENABLE_DAILY_ENERGY,
+    DEFAULT_ENABLE_LIVE_DATA,
     DEFAULT_PRIMARY_LOAD_LABEL,
     DEFAULT_SCAN_INTERVAL_SECONDS,
 )
@@ -29,6 +32,15 @@ def _attach_hass(flow: CatchSolarConfigFlow, hass) -> CatchSolarConfigFlow:
     flow.hass = hass
     flow.context = {}
     return flow
+
+
+def _config_entry(**kwargs):
+    parameters = inspect.signature(config_entries.ConfigEntry).parameters
+    if "unique_id" in parameters:
+        kwargs["unique_id"] = None
+    if "subentries_data" in parameters:
+        kwargs["subentries_data"] = {}
+    return config_entries.ConfigEntry(**kwargs)
 
 
 async def test_user_flow_single_location_creates_entry_with_default_options(hass) -> None:
@@ -64,13 +76,14 @@ async def test_user_flow_single_location_creates_entry_with_default_options(hass
     }
     assert result["options"] == {
         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL_SECONDS,
-        CONF_ENABLE_POWER_DATA: DEFAULT_ENABLE_POWER_DATA,
+        CONF_ENABLE_LIVE_DATA: DEFAULT_ENABLE_LIVE_DATA,
+        CONF_ENABLE_DAILY_ENERGY: DEFAULT_ENABLE_DAILY_ENERGY,
         CONF_PRIMARY_LOAD_LABEL: DEFAULT_PRIMARY_LOAD_LABEL,
     }
 
 
 async def test_options_flow_returns_user_values(hass) -> None:
-    entry = config_entries.ConfigEntry(
+    entry = _config_entry(
         version=1,
         minor_version=1,
         domain="catchsolar",
@@ -78,13 +91,13 @@ async def test_options_flow_returns_user_values(hass) -> None:
         data={},
         options={
             CONF_SCAN_INTERVAL: 900,
-            CONF_ENABLE_POWER_DATA: False,
+            CONF_ENABLE_LIVE_DATA: False,
+            CONF_ENABLE_DAILY_ENERGY: False,
             CONF_PRIMARY_LOAD_LABEL: "Water Heater",
         },
         source="user",
         entry_id="test-entry",
         discovery_keys={},
-        subentries_data={},
     )
     flow = CatchSolarConfigFlow.async_get_options_flow(entry)
     flow.hass = hass
@@ -92,7 +105,8 @@ async def test_options_flow_returns_user_values(hass) -> None:
     result = await flow.async_step_init(
         {
             CONF_SCAN_INTERVAL: 300,
-            CONF_ENABLE_POWER_DATA: True,
+            CONF_ENABLE_LIVE_DATA: True,
+            CONF_ENABLE_DAILY_ENERGY: True,
             CONF_PRIMARY_LOAD_LABEL: "Pool Pump",
         }
     )
@@ -100,13 +114,14 @@ async def test_options_flow_returns_user_values(hass) -> None:
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {
         CONF_SCAN_INTERVAL: 300,
-        CONF_ENABLE_POWER_DATA: True,
+        CONF_ENABLE_LIVE_DATA: True,
+        CONF_ENABLE_DAILY_ENERGY: True,
         CONF_PRIMARY_LOAD_LABEL: "Pool Pump",
     }
 
 
 async def test_options_flow_init_form_uses_existing_defaults(hass) -> None:
-    entry = config_entries.ConfigEntry(
+    entry = _config_entry(
         version=1,
         minor_version=1,
         domain="catchsolar",
@@ -114,13 +129,13 @@ async def test_options_flow_init_form_uses_existing_defaults(hass) -> None:
         data={},
         options={
             CONF_SCAN_INTERVAL: 900,
-            CONF_ENABLE_POWER_DATA: False,
+            CONF_ENABLE_LIVE_DATA: False,
+            CONF_ENABLE_DAILY_ENERGY: False,
             CONF_PRIMARY_LOAD_LABEL: "Water Heater",
         },
         source="user",
         entry_id="test-entry",
         discovery_keys={},
-        subentries_data={},
     )
     flow = CatchSolarConfigFlow.async_get_options_flow(entry)
     flow.hass = hass

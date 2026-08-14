@@ -9,14 +9,16 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import CatchSolarApiAuthError, CatchSolarApiClient, CatchSolarApiError
 from .const import (
     CONF_ACCOUNT_ID,
-    CONF_ENABLE_POWER_DATA,
+    CONF_ENABLE_DAILY_ENERGY,
+    CONF_ENABLE_LIVE_DATA,
     CONF_LOCATION_ID,
     CONF_LOCATION_NAME,
     CONF_PASSWORD,
     CONF_PRIMARY_LOAD_LABEL,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
-    DEFAULT_ENABLE_POWER_DATA,
+    DEFAULT_ENABLE_DAILY_ENERGY,
+    DEFAULT_ENABLE_LIVE_DATA,
     DEFAULT_PRIMARY_LOAD_LABEL,
     DEFAULT_SCAN_INTERVAL_SECONDS,
     DOMAIN,
@@ -24,7 +26,7 @@ from .const import (
 
 
 class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    VERSION = 3
 
     def __init__(self) -> None:
         self._account_id: int | None = None
@@ -108,7 +110,8 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
             options={
                 CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL_SECONDS,
-                CONF_ENABLE_POWER_DATA: DEFAULT_ENABLE_POWER_DATA,
+                CONF_ENABLE_LIVE_DATA: DEFAULT_ENABLE_LIVE_DATA,
+                CONF_ENABLE_DAILY_ENERGY: DEFAULT_ENABLE_DAILY_ENERGY,
                 CONF_PRIMARY_LOAD_LABEL: DEFAULT_PRIMARY_LOAD_LABEL,
             },
         )
@@ -185,9 +188,15 @@ class CatchSolarOptionsFlow(config_entries.OptionsFlow):
                         ),
                     ): vol.All(vol.Coerce(int), vol.Range(min=60)),
                     vol.Required(
-                        CONF_ENABLE_POWER_DATA,
+                        CONF_ENABLE_LIVE_DATA,
                         default=self._config_entry.options.get(
-                            CONF_ENABLE_POWER_DATA, DEFAULT_ENABLE_POWER_DATA
+                            CONF_ENABLE_LIVE_DATA, DEFAULT_ENABLE_LIVE_DATA
+                        ),
+                    ): bool,
+                    vol.Required(
+                        CONF_ENABLE_DAILY_ENERGY,
+                        default=self._config_entry.options.get(
+                            CONF_ENABLE_DAILY_ENERGY, DEFAULT_ENABLE_DAILY_ENERGY
                         ),
                     ): bool,
                     vol.Required(

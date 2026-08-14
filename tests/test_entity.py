@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from zoneinfo import ZoneInfo
 
 import pytest
 
 pytest.importorskip("homeassistant")
+
+from homeassistant.util import dt as dt_util
 
 from custom_components.catchsolar.binary_sensor import (
     CatchSolarLoadStateBinarySensor,
@@ -12,10 +15,25 @@ from custom_components.catchsolar.binary_sensor import (
 )
 from custom_components.catchsolar.entity import CatchSolarCoordinatorEntity
 from custom_components.catchsolar.sensor import (
-    CatchSolarPowerSensor,
     CatchSolarPrimaryLoadRuntimeSensor,
     CatchSolarPrimaryLoadStateRawSensor,
 )
+from custom_components.catchsolar.telemetry_sensor import (
+    CatchSolarActorPowerSensor,
+    CatchSolarActorSocSensor,
+    CatchSolarActorStateSensor,
+    CatchSolarChannelPowerSensor,
+    CatchSolarDailyEnergySensor,
+    CatchSolarLiveSiteSensor,
+)
+
+
+@pytest.fixture(autouse=True)
+def _brisbane_timezone():
+    original = dt_util.DEFAULT_TIME_ZONE
+    dt_util.set_default_time_zone(ZoneInfo("Australia/Brisbane"))
+    yield
+    dt_util.set_default_time_zone(original)
 
 
 def _build_coordinator() -> SimpleNamespace:
@@ -31,19 +49,6 @@ def _build_coordinator() -> SimpleNamespace:
                 "current_interval_start": None,
                 "last_processed_at": "2026-06-29T00:30:21+00:00",
                 "primary_load_on": False,
-            },
-            "power": {
-                "timestamp_ms": 1782685500000,
-                "series": {
-                    "solar_power": -2797.16,
-                    "total_consumption_power": None,
-                    "export_import_power": -41.12,
-                },
-                "latest_non_null_series": {
-                    "solar_power": -2797.16,
-                    "total_consumption_power": 0,
-                    "export_import_power": -41.12,
-                },
             },
             "devices": [
                 {
@@ -73,7 +78,7 @@ def test_coordinator_entity_exposes_catchsolar_device_without_shadowing_core_pro
         "online": 1,
         "impl_class": "Relay",
     }
-    assert not hasattr(type(entity), "device_entry")
+    assert "device_entry" not in CatchSolarCoordinatorEntity.__dict__
 
 
 def test_load_state_binary_sensor_reads_primary_device_state() -> None:
@@ -81,21 +86,6 @@ def test_load_state_binary_sensor_reads_primary_device_state() -> None:
 
     assert entity.is_on is True
     assert entity.extra_state_attributes["raw_load_state"] == 1
-
-
-def test_power_sensor_exposes_raw_bucket_metadata() -> None:
-    entity = CatchSolarPowerSensor(
-        _build_coordinator(),
-        "total_consumption_power",
-        "Monocle Total Consumption Power",
-    )
-
-    assert entity.native_value is None
-    assert entity.extra_state_attributes["series_key"] == "total_consumption_power"
-    assert entity.extra_state_attributes["series_resolution_seconds"] == 300
-    assert entity.extra_state_attributes["latest_non_null_value"] == 0
-    assert entity.extra_state_attributes["timestamp_local"] == "2026-06-29T08:25:00+10:00"
-    assert entity.extra_state_attributes["last_polled_at"] == "2026-06-29T00:30:21+00:00"
 
 
 def test_device_info_uses_semantic_names_with_ids() -> None:
@@ -133,3 +123,79 @@ def test_primary_location_entities_use_primary_load_label() -> None:
 
     assert raw_sensor.name == "Water Heater State Raw"
     assert binary_sensor.name == "Water Heater State"
+
+
+def test_daily_energy_sensor_is_energy_dashboard_compatible() -> None:
+    coordinator = SimpleNamespace(
+        data={
+            "location": {"id": 99999, "name": "Home"},
+            "series": {"grid_import_energy": 4.321},
+            "raw_total_wh": {"grid_import_energy": 4321},
+            "window_start": "2026-08-12T14:00:00.000Z",
+            "window_end": "2026-08-13T14:00:00.000Z",
+            "last_polled_at": "2026-08-13T00:00:00+00:00",
+        },
+        config={},
+        last_update_success=True,
+    )
+
+    entity = CatchSolarDailyEnergySensor(
+        coordinator,
+        "grid_import_energy",
+        "Daily Grid Import",
+    )
+
+    assert entity.native_value == 4.321
+    assert entity.extra_state_attributes["raw_total_wh"] == 4321
+    assert entity.available is True
+
+
+def test_live_entities_read_site_actor_and_channel_data() -> None:
+    coordinator = SimpleNamespace(
+        data={
+            "location": {"id": 99999, "name": "Home"},
+            "site_power": {"mains_power": -250},
+            "limits": {},
+            "actors": [
+                {
+                    "id": "actor-1",
+                    "class": "BATT",
+                    "name": "Battery",
+                    "power": -1200,
+                    "state": "CHARGING",
+                    "soc": 73,
+                }
+            ],
+            "channels": [
+                {
+                    "key": "LOAD:Hot Water",
+                    "name": "Hot Water",
+                    "type": "LOAD",
+                    "power": 3600,
+                }
+            ],
+            "last_event_at": "2026-08-13T00:00:00+00:00",
+        },
+        config={},
+        last_update_success=True,
+    )
+
+    mains = CatchSolarLiveSiteSensor(
+        coordinator,
+        "mains_power",
+        "Live Mains Power",
+        "site_power",
+    )
+    actor_power = CatchSolarActorPowerSensor(coordinator, "actor-1")
+    actor_state = CatchSolarActorStateSensor(coordinator, "actor-1")
+    actor_soc = CatchSolarActorSocSensor(coordinator, "actor-1")
+    channel = CatchSolarChannelPowerSensor(coordinator, "LOAD:Hot Water")
+
+    assert mains.native_value == -250
+    assert mains.extra_state_attributes["sign_convention"] == ("positive import, negative export")
+    assert actor_power.native_value == -1200
+    assert actor_state.native_value == "CHARGING"
+    assert actor_soc.native_value == 73
+    assert actor_power.device_info["name"] == "Battery"
+    assert channel.native_value == 3600
+    assert channel.extra_state_attributes["channel_type"] == "LOAD"
