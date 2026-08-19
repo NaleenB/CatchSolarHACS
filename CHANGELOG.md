@@ -4,6 +4,8 @@ Implementation and installation details are in the [README](README.md).
 
 ## Unreleased
 
+## 0.2.1 — 2026-08-19
+
 - Keep missing or malformed device state unknown instead of treating it as off;
   dynamically add relays discovered after startup.
 - Add typed config-entry runtime data, checkpointed runtime persistence, polling
