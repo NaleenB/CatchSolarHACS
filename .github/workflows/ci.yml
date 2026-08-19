@@ -7,18 +7,25 @@ on:
 jobs:
   lint-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
       - name: Install tooling
-        run: python -m pip install --upgrade pip ruff mypy pytest
+        run: >-
+          python -m pip install --upgrade pip ruff mypy pytest pytest-cov
+          pytest-homeassistant-custom-component
+          "python-socketio>=5.0,<6.0"
       - name: Ruff
         run: ruff check .
       - name: Mypy
         run: mypy
+      - name: Verify Home Assistant test harness
+        run: python -c "import homeassistant"
       - name: Pytest
-        run: pytest
+        run: pytest --cov=custom_components/catchsolar --cov-report=term-missing --cov-fail-under=75
       - name: Compile sources
         run: python -m compileall custom_components

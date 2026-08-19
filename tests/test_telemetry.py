@@ -5,8 +5,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-pytest.importorskip("homeassistant")
-
 from custom_components.catchsolar.telemetry import (
     CatchSolarDailyEnergyCoordinator,
     CatchSolarLiveCoordinator,

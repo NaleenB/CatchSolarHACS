@@ -1,0 +1,13 @@
+rules:
+  config_flow: done
+  test_before_configure: done
+  test_before_setup: done
+  unique_config_entry: done
+  config_entry_unloading: done
+  reauthentication_flow: done
+  diagnostics: done
+  runtime_data: done
+  entity_unavailable: done
+  test_coverage:
+    status: todo
+    comment: CI now runs the HA-backed suite and enforces a 75 percent floor; raise the floor as module coverage improves.

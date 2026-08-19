@@ -1,5 +1,9 @@
 # Catch Solar HACS
 
+Implementation and release details are recorded in the
+[`CHANGELOG.md`](CHANGELOG.md). Do not include credentials or private API
+responses in issue reports.
+
 Home Assistant custom integration for [Catch Solar](https://catchpower.com.au) / The Monocle.
 
 Catch Solar is an Australian solar energy monitoring system. The Monocle is the energy monitoring device that tracks your home's solar generation, consumption, and controlled loads (such as water heaters and pool pumps).
@@ -15,7 +19,10 @@ This integration connects to the Monocle API through Home Assistant's guided set
 - **Energy Dashboard meters** — optional daily solar yield, grid import, grid
   export, house consumption, and consumed-solar totals
 
-No credentials belong in this repository. You enter your Catch Solar username and password during the guided setup inside Home Assistant, and Home Assistant stores them securely in the config entry.
+No credentials belong in this repository. You enter your Catch Solar username
+and password during guided setup inside Home Assistant, which stores them in
+the config entry. Protect Home Assistant backups and `.storage` data because
+the integration does not encrypt credentials itself.
 
 ## Live-data note
 
@@ -154,6 +161,8 @@ Home Assistant handle that daily reset when building long-term statistics.
 - The runtime sensors use hours as their native unit and round to 2 decimal places.
 - `Primary Load Runtime 24h` means local-calendar-day runtime since midnight, even though the entity name uses `24h`.
 - Runtime state is persisted by the integration and survives restarts, including the case where the primary load stays on across a restart.
+- Runtime sensors expose `data_gap_seconds` when polling was interrupted long
+  enough that the reported runtime should be treated as an estimate.
 - Device names include identifiers for debugging (e.g. `Catch Solar Location 99999`, `Water Heater Relay 88888`) rather than bare numeric names.
 - If credentials expire or change, Home Assistant will prompt you for reauthentication through the config entry (no need to remove and re-add the integration).
 - Diagnostics are shareable: sensitive values such as usernames, passwords, and tokens are automatically redacted.
@@ -161,6 +170,19 @@ Home Assistant handle that daily reset when building long-term statistics.
   state or runtime entities unavailable.
 - This integration is read-only. It does not register Catch Power override or
   device-control services.
+
+## Troubleshooting
+
+- If the primary-load entity is unavailable, check the device endpoint and the
+  integration diagnostics. Missing or malformed `loadState` is intentionally
+  shown as unknown rather than off.
+- If live telemetry is unavailable, disable and re-enable **Enable live data**
+  after confirming the core primary-load entity still updates. Live telemetry
+  and daily-energy failures are isolated from primary-load polling.
+- When reporting an issue, include the integration version, Home Assistant
+  version, enabled optional features, and a reviewed diagnostics download. Do
+  not include passwords, access tokens, addresses, serial numbers, or raw API
+  responses.
 
 ## Acknowledgements
 

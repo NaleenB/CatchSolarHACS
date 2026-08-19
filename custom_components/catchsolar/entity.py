@@ -52,6 +52,14 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
         return None
 
     @property
+    def available(self) -> bool:
+        # Lightweight coordinator doubles used by integrations/tests may not
+        # expose HA's last_update_success attribute. Real coordinators do, and
+        # missing it should not make an entity crash while rendering state.
+        coordinator_available = getattr(self.coordinator, "last_update_success", True)
+        return bool(coordinator_available) and self.catchsolar_device is not None
+
+    @property
     def location_entry(self) -> dict[str, Any]:
         return self.coordinator.data.get("location", {})
 
@@ -87,6 +95,10 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
 
 class CatchSolarLocationEntity(CoordinatorEntity):
     _attr_has_entity_name = True
+
+    @property
+    def available(self) -> bool:
+        return bool(getattr(self.coordinator, "last_update_success", True))
 
     @property
     def location_entry(self) -> dict[str, Any]:

@@ -8,9 +8,9 @@ Install it before running the test suite:
 
     pip install pytest-homeassistant-custom-component
 
-If the package is not installed, individual tests import-guard with
-``pytest.importorskip("homeassistant")`` and will be skipped rather
-than failing the suite.
+The CI workflow installs this package before running the suite. The HA-backed
+tests intentionally fail fast when the harness is missing so CI cannot report
+a false-green result with most integration tests skipped.
 """
 
 from __future__ import annotations

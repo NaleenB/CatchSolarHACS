@@ -48,7 +48,11 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
             try:
                 login = await api.async_login()
-                self._account_id = int(login["id"])
+                account_id = login.get("id")
+                parsed_account_id = _safe_int(account_id)
+                if parsed_account_id is None:
+                    raise CatchSolarApiError("Login response did not contain an account id")
+                self._account_id = parsed_account_id
                 self._locations = await api.async_get_locations()
                 if not self._locations:
                     errors["base"] = "no_locations"
@@ -76,9 +80,16 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            selected_id = int(user_input["location_id"])
+            try:
+                selected_id = int(user_input["location_id"])
+            except (TypeError, ValueError):
+                selected_id = None
             location = next(
-                (item for item in self._locations if int(item.get("id")) == selected_id),
+                (
+                    item
+                    for item in self._locations
+                    if _safe_int(item.get("id")) == selected_id
+                ),
                 None,
             )
             if location is None:
@@ -86,7 +97,11 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 return await self._async_create_location_entry(location)
 
-        options = {str(item["id"]): item.get("name") or str(item["id"]) for item in self._locations}
+        options = {
+            str(item["id"]): item.get("name") or str(item["id"])
+            for item in self._locations
+            if _safe_int(item.get("id")) is not None
+        }
         return self.async_show_form(
             step_id="location",
             data_schema=vol.Schema({vol.Required("location_id"): vol.In(options)}),
@@ -94,7 +109,9 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def _async_create_location_entry(self, location: dict[str, Any]):
-        location_id = int(location["id"])
+        location_id = _safe_int(location.get("id"))
+        if location_id is None:
+            return self.async_abort(reason="invalid_location")
         unique_id = f"{self._account_id}:{location_id}"
         await self.async_set_unique_id(unique_id)
         self._abort_if_unique_id_configured()
@@ -167,6 +184,15 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     def async_get_options_flow(config_entry: config_entries.ConfigEntry):
         return CatchSolarOptionsFlow(config_entry)
+
+
+def _safe_int(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 class CatchSolarOptionsFlow(config_entries.OptionsFlow):

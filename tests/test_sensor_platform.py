@@ -4,8 +4,6 @@ from types import SimpleNamespace
 
 import pytest
 
-pytest.importorskip("homeassistant")
-
 from custom_components.catchsolar.const import DOMAIN
 from custom_components.catchsolar.sensor import (
     CatchSolarDeviceMetadataSensor,
@@ -50,8 +48,10 @@ async def test_sensor_setup_adds_runtime_sensors_once_at_location_scope() -> Non
         },
         config={"primary_load_label": "Water Heater"},
     )
+    coordinator.async_add_listener = lambda callback: lambda: None
     hass = SimpleNamespace(data={DOMAIN: {"entry-1": {"coordinator": coordinator}}})
     entry = SimpleNamespace(entry_id="entry-1")
+    entry.async_on_unload = lambda callback: None
     added = []
 
     await async_setup_entry(hass, entry, added.extend)

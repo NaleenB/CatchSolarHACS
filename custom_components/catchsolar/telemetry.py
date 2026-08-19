@@ -205,11 +205,13 @@ class CatchSolarLiveCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 class CatchSolarLiveClient:
     def __init__(
         self,
+        hass: HomeAssistant,
         api: CatchSolarApiClient,
         session: ClientSession,
         location_id: int,
         coordinator: CatchSolarLiveCoordinator,
     ) -> None:
+        self._hass = hass
         self._api = api
         self._session = session
         self._location_id = location_id
@@ -217,12 +219,13 @@ class CatchSolarLiveClient:
         self._task: asyncio.Task[None] | None = None
         self._sio: socketio.AsyncClient | None = None
         self._stopping = False
+        self._healthy_event = False
 
     async def async_start(self) -> None:
         if self._task is not None and not self._task.done():
             return
         self._stopping = False
-        self._task = asyncio.create_task(
+        self._task = self._hass.async_create_background_task(
             self._async_connection_loop(),
             name=f"catchsolar-live-{self._location_id}",
         )
@@ -254,9 +257,11 @@ class CatchSolarLiveClient:
                     http_session=self._session,
                 )
                 self._sio = sio
+                self._healthy_event = False
 
                 @sio.on("event")
                 async def _handle_event(payload: Any) -> None:
+                    self._healthy_event = True
                     await self._coordinator.async_handle_event(payload)
 
                 @sio.event
@@ -271,7 +276,6 @@ class CatchSolarLiveClient:
                     socketio_path="socket.io",
                     wait_timeout=20,
                 )
-                backoff = 5
                 await sio.wait()
             except asyncio.CancelledError:
                 raise
@@ -285,6 +289,8 @@ class CatchSolarLiveClient:
                 await self._async_disconnect()
 
             if not self._stopping:
+                if self._healthy_event:
+                    backoff = 5
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, 60)
 

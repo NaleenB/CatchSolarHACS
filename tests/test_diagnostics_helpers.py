@@ -17,7 +17,7 @@ def test_redact_value_redacts_nested_credentials() -> None:
     value = {
         "username": "person@example.com",
         "password": "secret",
-        "device": {"token": "abc", "serialNumber": "SERIAL-001"},
+        "device": {"token": "abc", "serialNumber": "SERIAL-001", "id": 123},
         "items": [{"accessToken": "xyz", "name": "item"}],
     }
 
@@ -26,5 +26,6 @@ def test_redact_value_redacts_nested_credentials() -> None:
     assert result["username"] == "**REDACTED**"
     assert result["password"] == "**REDACTED**"
     assert result["device"]["token"] == "**REDACTED**"
-    assert result["device"]["serialNumber"] == "SERIAL-001"
+    assert result["device"]["serialNumber"] == "**REDACTED**"
+    assert result["device"]["id"] == "**REDACTED**"
     assert result["items"][0]["accessToken"] == "**REDACTED**"

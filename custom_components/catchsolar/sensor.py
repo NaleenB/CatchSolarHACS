@@ -6,8 +6,9 @@ from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, RUNTIME_SENSOR_7D_ROLLING, RUNTIME_SENSOR_24H, RUNTIME_SENSOR_TOTAL
+from .const import RUNTIME_SENSOR_7D_ROLLING, RUNTIME_SENSOR_24H, RUNTIME_SENSOR_TOTAL
 from .entity import CatchSolarCoordinatorEntity, CatchSolarLocationEntity
+from .runtime_data import get_runtime_data
 from .telemetry_sensor import setup_telemetry_sensors
 
 DEVICE_SENSOR_KEYS = {
@@ -25,7 +26,7 @@ DEVICE_SENSOR_KEYS = {
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    integration_data = hass.data[DOMAIN][entry.entry_id]
+    integration_data = get_runtime_data(hass, entry)
     coordinator = integration_data["coordinator"]
     entities: list[SensorEntity] = [
         CatchSolarPrimaryLoadStateRawSensor(coordinator),
@@ -46,14 +47,26 @@ async def async_setup_entry(
         ),
     ]
 
-    for device in coordinator.data.get("devices", []):
-        device_id = device.get("id")
-        if device_id is None:
-            continue
-        for key, name in DEVICE_SENSOR_KEYS.items():
-            entities.append(CatchSolarDeviceMetadataSensor(coordinator, device_id, key, name))
-
     async_add_entities(entities)
+    seen_device_ids: set[int] = set()
+
+    def _add_device_entities() -> None:
+        new_entities: list[SensorEntity] = []
+        for device in coordinator.data.get("devices", []):
+            device_id = device.get("id")
+            if not isinstance(device_id, int) or device_id in seen_device_ids:
+                continue
+            seen_device_ids.add(device_id)
+            for key, name in DEVICE_SENSOR_KEYS.items():
+                new_entities.append(
+                    CatchSolarDeviceMetadataSensor(coordinator, device_id, key, name)
+                )
+        if new_entities:
+            async_add_entities(new_entities)
+
+    _add_device_entities()
+    remove_listener = coordinator.async_add_listener(_add_device_entities)
+    entry.async_on_unload(remove_listener)
     setup_telemetry_sensors(entry, integration_data, async_add_entities)
 
 
@@ -141,6 +154,7 @@ class CatchSolarPrimaryLoadRuntimeSensor(CatchSolarLocationEntity, SensorEntity)
             "primary_device_id": primary.get("id"),
             "primary_device_name": primary.get("device_name"),
             "primary_load_on": runtime.get("primary_load_on"),
+            "data_gap_seconds": runtime.get("data_gap_seconds", 0),
             "current_interval_start": runtime.get("current_interval_start"),
             "last_processed_at": runtime.get("last_processed_at"),
         }

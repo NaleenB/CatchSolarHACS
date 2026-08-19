@@ -3,10 +3,6 @@ from __future__ import annotations
 import inspect
 from unittest.mock import AsyncMock, patch
 
-import pytest
-
-pytest.importorskip("homeassistant")
-
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
@@ -80,6 +76,28 @@ async def test_user_flow_single_location_creates_entry_with_default_options(hass
         CONF_ENABLE_DAILY_ENERGY: DEFAULT_ENABLE_DAILY_ENERGY,
         CONF_PRIMARY_LOAD_LABEL: DEFAULT_PRIMARY_LOAD_LABEL,
     }
+
+
+async def test_user_flow_rejects_malformed_account_id(hass) -> None:
+    flow = _attach_hass(CatchSolarConfigFlow(), hass)
+
+    with (
+        patch(
+            "custom_components.catchsolar.config_flow.async_get_clientsession",
+            return_value=object(),
+        ),
+        patch(
+            "custom_components.catchsolar.config_flow.CatchSolarApiClient",
+        ) as client_cls,
+    ):
+        client_cls.return_value.async_login = AsyncMock(return_value={"id": "invalid"})
+
+        result = await flow.async_step_user(
+            {CONF_USERNAME: "user@example.com", CONF_PASSWORD: "secret"}
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "cannot_connect"}
 
 
 async def test_options_flow_returns_user_values(hass) -> None:

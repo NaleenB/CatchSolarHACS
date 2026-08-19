@@ -6,22 +6,32 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
 from .entity import CatchSolarCoordinatorEntity, CatchSolarLocationEntity
+from .runtime_data import get_runtime_data
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
-    entities: list[BinarySensorEntity] = [CatchSolarPrimaryLoadStateBinarySensor(coordinator)]
-    for device in coordinator.data.get("devices", []):
-        device_id = device.get("id")
-        if device_id is None:
-            continue
-        entities.append(CatchSolarLoadStateBinarySensor(coordinator, device_id))
-        entities.append(CatchSolarOnlineBinarySensor(coordinator, device_id))
-    async_add_entities(entities)
+    coordinator = get_runtime_data(hass, entry)["coordinator"]
+    async_add_entities([CatchSolarPrimaryLoadStateBinarySensor(coordinator)])
+    seen_device_ids: set[int] = set()
+
+    def _add_device_entities() -> None:
+        entities: list[BinarySensorEntity] = []
+        for device in coordinator.data.get("devices", []):
+            device_id = device.get("id")
+            if not isinstance(device_id, int) or device_id in seen_device_ids:
+                continue
+            seen_device_ids.add(device_id)
+            entities.append(CatchSolarLoadStateBinarySensor(coordinator, device_id))
+            entities.append(CatchSolarOnlineBinarySensor(coordinator, device_id))
+        if entities:
+            async_add_entities(entities)
+
+    _add_device_entities()
+    remove_listener = coordinator.async_add_listener(_add_device_entities)
+    entry.async_on_unload(remove_listener)
 
 
 class CatchSolarLoadStateBinarySensor(CatchSolarCoordinatorEntity, BinarySensorEntity):
@@ -33,9 +43,15 @@ class CatchSolarLoadStateBinarySensor(CatchSolarCoordinatorEntity, BinarySensorE
         self._attr_name = "Load State"
 
     @property
-    def is_on(self) -> bool:
-        device = self.catchsolar_device or {}
-        return int(device.get("load_state", 0)) == 1
+    def is_on(self) -> bool | None:
+        device = self.catchsolar_device
+        if device is None or device.get("load_state") is None:
+            return None
+        return device["load_state"] == 1
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.catchsolar_device is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, object]:
@@ -56,12 +72,17 @@ class CatchSolarPrimaryLoadStateBinarySensor(CatchSolarLocationEntity, BinarySen
         self._attr_name = f"{self.primary_load_label} State"
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         primary = self.coordinator.data.get("primary_device_id")
         for device in self.coordinator.data.get("devices", []):
             if device.get("id") == primary:
-                return int(device.get("load_state", 0)) == 1
-        return False
+                load_state = device.get("load_state")
+                return None if load_state is None else load_state == 1
+        return None
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.coordinator.data.get("primary_device_id") is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, object]:
@@ -86,9 +107,15 @@ class CatchSolarOnlineBinarySensor(CatchSolarCoordinatorEntity, BinarySensorEnti
         self._attr_name = "Online"
 
     @property
-    def is_on(self) -> bool:
-        device = self.catchsolar_device or {}
-        return int(device.get("online", 0)) == 1
+    def is_on(self) -> bool | None:
+        device = self.catchsolar_device
+        if device is None or device.get("online") is None:
+            return None
+        return device["online"] == 1
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.catchsolar_device is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, object]:
