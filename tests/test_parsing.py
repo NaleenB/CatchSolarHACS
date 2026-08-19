@@ -46,9 +46,19 @@ def test_pick_primary_device_prefers_controlling_load() -> None:
     assert pick_primary_device(devices) == {"id": 2, "controlling_load": 1}
 
 
-def test_pick_primary_device_falls_back_to_first_device() -> None:
+def test_pick_primary_device_returns_none_without_controlling_load() -> None:
     devices = [{"id": 1, "controlling_load": 0}, {"id": 2, "controlling_load": 0}]
-    assert pick_primary_device(devices) == {"id": 1, "controlling_load": 0}
+    assert pick_primary_device(devices) is None
+
+
+def test_normalize_device_entry_rejects_invalid_state_and_ids() -> None:
+    normalized = normalize_device_entry(
+        {"loadState": "invalid", "online": None, "device": {"id": 0, "locationId": "bad"}}
+    )
+    assert normalized["id"] is None
+    assert normalized["location_id"] is None
+    assert normalized["load_state"] is None
+    assert normalized["online"] is None
 
 
 def test_parse_locations_ignores_invalid_result_shape() -> None:

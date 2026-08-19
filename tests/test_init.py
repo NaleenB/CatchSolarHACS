@@ -5,9 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-pytest.importorskip("homeassistant")
-
-from custom_components.catchsolar.__init__ import (
+from custom_components.catchsolar import (
     async_remove_entry,
     async_setup_entry,
     async_unload_entry,

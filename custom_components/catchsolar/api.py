@@ -4,7 +4,7 @@ import asyncio
 from json import JSONDecodeError
 from typing import Any
 
-from aiohttp import ClientError, ClientResponseError, ClientSession
+from aiohttp import ClientError, ClientResponseError, ClientSession, ClientTimeout
 
 from .const import API_BASE
 from .parsing import parse_locations
@@ -25,6 +25,7 @@ class CatchSolarApiClient:
         self._password = password
         self._token: str | None = None
         self._login_lock = asyncio.Lock()
+        self._request_timeout = ClientTimeout(total=30, connect=10, sock_read=20)
 
     async def _request_json(
         self,
@@ -39,6 +40,7 @@ class CatchSolarApiClient:
             await self.async_login()
 
         headers = {"Content-Type": "application/json"}
+        request_token = self._token
         if authenticated and self._token is not None:
             headers["Authorization"] = f"Token {self._token}"
 
@@ -48,12 +50,15 @@ class CatchSolarApiClient:
                 f"{API_BASE}{path}",
                 json=json_payload,
                 headers=headers,
-                timeout=30,
+                timeout=self._request_timeout,
             ) as response:
                 if response.status == 401:
                     if retry_auth:
-                        self._token = None
-                        await self.async_login()
+                        # Another concurrent request may already have refreshed
+                        # the token. Reuse it instead of creating a login storm.
+                        if request_token == self._token:
+                            self._token = None
+                            await self.async_login()
                         return await self._request_json(
                             method,
                             path,
@@ -72,8 +77,10 @@ class CatchSolarApiClient:
         except (TimeoutError, ClientError, JSONDecodeError) as err:
             raise CatchSolarApiError(f"Request failed for {path}") from err
 
-    async def async_login(self) -> dict[str, Any]:
+    async def async_login(self, *, force: bool = False) -> dict[str, Any]:
         async with self._login_lock:
+            if self._token is not None and not force:
+                return {"accessToken": self._token}
             payload = await self._request_json(
                 "POST",
                 "/auth/login",

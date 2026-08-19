@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -29,6 +30,7 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         api: CatchSolarApiClient,
         config: dict[str, Any],
         runtime_tracker: PrimaryLoadRuntimeTracker,
+        config_entry: ConfigEntry | None = None,
     ) -> None:
         scan_interval = int(config.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_SECONDS))
         super().__init__(
@@ -36,6 +38,7 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             logger=logging.getLogger(__name__),
             name="Catch Solar",
             update_interval=timedelta(seconds=scan_interval),
+            config_entry=config_entry,
         )
         self.api = api
         self.config = config

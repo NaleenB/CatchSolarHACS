@@ -1,5 +1,17 @@
 # Changelog
 
+Implementation and installation details are in the [README](README.md).
+
+## Unreleased
+
+- Keep missing or malformed device state unknown instead of treating it as off;
+  dynamically add relays discovered after startup.
+- Add typed config-entry runtime data, checkpointed runtime persistence, polling
+  gap diagnostics, coalesced token refresh, and safer live reconnect backoff.
+- Redact identifying device/location fields from diagnostics.
+- Make the HA-backed test suite fail fast when its harness is missing, enforce
+  coverage, pin GitHub Actions, and add Dependabot/security-policy metadata.
+
 ## 0.2.0 — 2026-08-13
 
 - Add optional read-only Socket.IO telemetry for near-real-time mains, solar,

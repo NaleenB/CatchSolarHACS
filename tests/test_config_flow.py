@@ -3,10 +3,6 @@ from __future__ import annotations
 import inspect
 from unittest.mock import AsyncMock, patch
 
-import pytest
-
-pytest.importorskip("homeassistant")
-
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 

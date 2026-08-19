@@ -5,14 +5,15 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, EXPERIMENTAL_FEATURES
+from .const import EXPERIMENTAL_FEATURES
 from .diagnostics_helpers import redact_value
+from .runtime_data import get_runtime_data
 
 
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
-    integration_data = hass.data[DOMAIN][entry.entry_id]
+    integration_data = get_runtime_data(hass, entry)
     coordinator = integration_data["coordinator"]
     daily_energy_coordinator = integration_data.get("daily_energy_coordinator")
     live_coordinator = integration_data.get("live_coordinator")
@@ -32,7 +33,7 @@ async def async_get_config_entry_diagnostics(
 
     return {
         "entry": redact_value(dict(entry.data)),
-        "options": dict(entry.options),
+        "options": redact_value(dict(entry.options)),
         "experimental_features": experimental_features,
         "data": redact_value(dict(coordinator.data)),
         "daily_energy": (

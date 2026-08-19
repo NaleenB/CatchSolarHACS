@@ -22,7 +22,11 @@ def parse_locations(payload: dict[str, Any]) -> list[dict[str, Any]]:
     result = payload.get("result")
     if not isinstance(result, list):
         return []
-    return [item for item in result if isinstance(item, dict)]
+    return [
+        item
+        for item in result
+        if isinstance(item, dict) and _positive_int(item.get("id")) is not None
+    ]
 
 
 def normalize_device_entry(entry: dict[str, Any]) -> dict[str, Any]:
@@ -31,26 +35,46 @@ def normalize_device_entry(entry: dict[str, Any]) -> dict[str, Any]:
         device = {}
 
     return {
-        "id": device.get("id"),
+        "id": _positive_int(device.get("id")),
         "device_name": device.get("deviceName"),
         "serial_number": device.get("serialNumber"),
         "device_type": device.get("deviceType"),
-        "location_id": device.get("locationId"),
+        "location_id": _positive_int(device.get("locationId")),
         "channel_1_type": device.get("ch1Type"),
         "channel_2_type": device.get("ch2Type"),
         "controlling_load": device.get("controllingLoad"),
         "controlling_inverter": device.get("controllingInverter"),
         "impl_class": device.get("implClass"),
-        "load_state": entry.get("loadState"),
-        "online": entry.get("online"),
+        "load_state": _binary_value(entry.get("loadState")),
+        "online": _binary_value(entry.get("online")),
     }
 
 
 def pick_primary_device(devices: list[dict[str, Any]]) -> dict[str, Any] | None:
     for device in devices:
-        if int(device.get("controlling_load", 0) or 0) == 1:
+        if _binary_value(device.get("controlling_load")) == 1:
             return device
-    return devices[0] if devices else None
+    return None
+
+
+def _positive_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _binary_value(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed in (0, 1) else None
 
 
 def _number(value: Any) -> float | None:

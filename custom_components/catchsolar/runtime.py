@@ -13,6 +13,7 @@ from .const import DOMAIN
 _STORAGE_VERSION = 1
 _RECENT_INTERVAL_RETENTION = timedelta(days=8)
 _TRAILING_WINDOW = timedelta(days=7)
+_CHECKPOINT_INTERVAL = timedelta(minutes=15)
 
 
 def _parse_datetime(value: str | None) -> datetime | None:
@@ -70,6 +71,7 @@ class RuntimeSnapshot:
     current_interval_start: datetime | None
     last_processed_at: datetime | None
     primary_load_on: bool
+    data_gap_seconds: float = 0.0
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -79,6 +81,7 @@ class RuntimeSnapshot:
             "current_interval_start": _serialize_datetime(self.current_interval_start),
             "last_processed_at": _serialize_datetime(self.last_processed_at),
             "primary_load_on": self.primary_load_on,
+            "data_gap_seconds": self.data_gap_seconds,
         }
 
 
@@ -136,16 +139,20 @@ class PrimaryLoadRuntimeTracker:
         )
         self._state = RuntimeState()
         self._loaded = False
+        self._last_persisted_at: datetime | None = None
+        self._last_data_gap_seconds = 0.0
 
     async def async_load(self) -> None:
         if self._loaded:
             return
         self._state = RuntimeState.from_dict(await self._store.async_load())
         self._loaded = True
+        self._last_persisted_at = self._state.last_processed_at
 
     async def async_delete(self) -> None:
         self._state = RuntimeState()
         self._loaded = True
+        self._last_persisted_at = None
         await self._store.async_remove()
 
     async def async_process(self, load_is_on: bool, now: datetime | None = None) -> RuntimeSnapshot:
@@ -157,6 +164,18 @@ class PrimaryLoadRuntimeTracker:
             and processed_at < self._state.last_processed_at
         ):
             processed_at = self._state.last_processed_at
+
+        previous_interval_start = self._state.current_interval_start
+        previous_total = self._state.total_runtime_seconds
+        previous_interval_count = len(self._state.recent_intervals)
+        previous_processed_at = self._state.last_processed_at
+        if previous_processed_at is None:
+            self._last_data_gap_seconds = 0.0
+        else:
+            elapsed = (processed_at - previous_processed_at).total_seconds()
+            self._last_data_gap_seconds = (
+                elapsed if elapsed > _CHECKPOINT_INTERVAL.total_seconds() * 2 else 0.0
+            )
 
         if self._state.current_interval_start is None:
             if load_is_on:
@@ -175,7 +194,18 @@ class PrimaryLoadRuntimeTracker:
 
         self._state.last_processed_at = processed_at
         self._trim_recent_intervals(processed_at)
-        await self._store.async_save(self._state.as_dict())
+        state_changed = (
+            previous_interval_start != self._state.current_interval_start
+            or previous_total != self._state.total_runtime_seconds
+            or previous_interval_count != len(self._state.recent_intervals)
+        )
+        checkpoint_due = (
+            self._last_persisted_at is None
+            or processed_at - self._last_persisted_at >= _CHECKPOINT_INTERVAL
+        )
+        if state_changed or previous_processed_at is None or checkpoint_due:
+            await self._store.async_save(self._state.as_dict())
+            self._last_persisted_at = processed_at
         return self.get_snapshot(processed_at)
 
     def get_snapshot(self, now: datetime | None = None) -> RuntimeSnapshot:
@@ -222,6 +252,7 @@ class PrimaryLoadRuntimeTracker:
             current_interval_start=current_interval_start,
             last_processed_at=self._state.last_processed_at,
             primary_load_on=current_interval_start is not None,
+            data_gap_seconds=self._last_data_gap_seconds,
         )
 
     def _trim_recent_intervals(self, now: datetime) -> None:

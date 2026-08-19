@@ -4,9 +4,6 @@ from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
-
-pytest.importorskip("homeassistant")
-
 from homeassistant.util import dt as dt_util
 
 from custom_components.catchsolar.binary_sensor import (
@@ -86,6 +83,28 @@ def test_load_state_binary_sensor_reads_primary_device_state() -> None:
 
     assert entity.is_on is True
     assert entity.extra_state_attributes["raw_load_state"] == 1
+
+
+def test_binary_sensors_keep_missing_state_unknown() -> None:
+    coordinator = _build_coordinator()
+    coordinator.data["devices"][0]["load_state"] = None
+
+    device_entity = CatchSolarLoadStateBinarySensor(coordinator, 88888)
+    primary_entity = CatchSolarPrimaryLoadStateBinarySensor(coordinator)
+
+    assert device_entity.is_on is None
+    assert device_entity.available is True
+    assert primary_entity.is_on is None
+
+
+def test_primary_binary_sensor_is_unavailable_without_identified_primary_device() -> None:
+    coordinator = _build_coordinator()
+    coordinator.data["primary_device_id"] = None
+
+    entity = CatchSolarPrimaryLoadStateBinarySensor(coordinator)
+
+    assert entity.is_on is None
+    assert entity.available is False
 
 
 def test_device_info_uses_semantic_names_with_ids() -> None:

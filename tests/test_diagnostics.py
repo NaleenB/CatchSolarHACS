@@ -4,8 +4,6 @@ from types import SimpleNamespace
 
 import pytest
 
-pytest.importorskip("homeassistant")
-
 from custom_components.catchsolar.const import DOMAIN
 from custom_components.catchsolar.diagnostics import async_get_config_entry_diagnostics
 
