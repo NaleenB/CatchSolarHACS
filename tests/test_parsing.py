@@ -91,53 +91,7 @@ def test_extract_daily_energy_converts_signed_wh_totals_to_positive_kwh() -> Non
 
 
 def test_extract_live_event_discovers_site_actor_and_channel_values() -> None:
-    result = extract_live_event(
-        {
-            "mainsPWR": -250,
-            "solarPWR": -4200,
-            "housePWR": 3950,
-            "batteryPWR": 0,
-            "channels": [
-                {
-                    "channelName": "Hot Water",
-                    "channelPWR": 3700,
-                    "channelType": "LOAD",
-                },
-                {
-                    "channelName": "Hot Water",
-                    "channelPWR": 3600,
-                    "channelType": "LOAD",
-                },
-                {
-                    "channelName": "undefined",
-                    "channelPWR": -11389,
-                    "channelType": "OTHER",
-                },
-            ],
-            "controllable": {
-                "OTHER": [
-                    {
-                        "id": "actor-1",
-                        "key": "HW",
-                        "name": "Water Heater",
-                        "pwr": 3600,
-                        "state": "ON",
-                    }
-                ],
-                "BATT": [
-                    {
-                        "id": "battery-1",
-                        "name": "Battery",
-                        "pwr": -1200,
-                        "state": "CHARGING",
-                        "soc": 73,
-                    }
-                ],
-            },
-            "csip": {"activeImportW": 15000, "activeControlW": -5000},
-            "deviceCount": 2,
-        }
-    )
+    result = extract_live_event(_load_fixture("live_event.json"))
 
     assert result["site_power"] == {
         "mains_power": -250.0,

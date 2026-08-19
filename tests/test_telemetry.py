@@ -1,14 +1,53 @@
 from __future__ import annotations
 
+import json
 from datetime import timedelta
-from unittest.mock import AsyncMock
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from custom_components.catchsolar.telemetry import (
     CatchSolarDailyEnergyCoordinator,
+    CatchSolarLiveClient,
     CatchSolarLiveCoordinator,
 )
+
+
+def _load_live_fixture() -> dict:
+    return json.loads((Path(__file__).parent / "fixtures" / "live_event.json").read_text())
+
+
+class _FakeSocket:
+    def __init__(self, wait_callback=None, connect_error: Exception | None = None) -> None:
+        self.handlers = {}
+        self.wait_callback = wait_callback
+        self.connect_error = connect_error
+        self.connect_args = None
+        self.disconnect_called = False
+
+    def on(self, name):
+        def register(handler):
+            self.handlers[name] = handler
+            return handler
+
+        return register
+
+    def event(self, handler):
+        self.handlers[handler.__name__] = handler
+        return handler
+
+    async def connect(self, *args, **kwargs):
+        self.connect_args = (args, kwargs)
+        if self.connect_error is not None:
+            raise self.connect_error
+
+    async def wait(self):
+        if self.wait_callback is not None:
+            await self.wait_callback(self)
+
+    async def disconnect(self):
+        self.disconnect_called = True
 
 
 @pytest.mark.asyncio
@@ -101,3 +140,80 @@ async def test_live_coordinator_throttles_publication_to_latest_event(hass) -> N
 
     await coordinator.async_shutdown()
     assert coordinator._publish_handle is None
+
+
+@pytest.mark.asyncio
+async def test_live_client_refreshes_token_after_reconnect(hass) -> None:
+    coordinator = CatchSolarLiveCoordinator(
+        hass,
+        {"location_id": 99999, "location_name": "Home"},
+    )
+    api = AsyncMock()
+    api.async_get_access_token.side_effect = ["token-1", "token-2"]
+    client = CatchSolarLiveClient(
+        hass,
+        api,
+        AsyncMock(),
+        99999,
+        coordinator,
+    )
+
+    async def first_wait(socket):
+        await socket.handlers["event"](_load_live_fixture())
+
+    async def second_wait(socket):
+        await socket.handlers["event"](_load_live_fixture())
+        client._stopping = True
+
+    sockets = [_FakeSocket(first_wait), _FakeSocket(second_wait)]
+    with (
+        patch("custom_components.catchsolar.telemetry.socketio.AsyncClient", side_effect=sockets),
+        patch("custom_components.catchsolar.telemetry.asyncio.sleep", new=AsyncMock()),
+    ):
+        await client._async_connection_loop()
+
+    assert api.async_get_access_token.await_args_list[0].args == ()
+    assert api.async_get_access_token.await_args_list[0].kwargs == {"refresh": False}
+    assert api.async_get_access_token.await_args_list[1].kwargs == {"refresh": True}
+    assert sockets[0].connect_args[1]["auth"] == {"token": "token-1", "locationId": 99999}
+    assert sockets[1].connect_args[1]["auth"] == {"token": "token-2", "locationId": 99999}
+    assert sockets[0].disconnect_called is True
+    assert sockets[1].disconnect_called is True
+    assert coordinator.data["site_power"]["solar_power"] == 4200.0
+
+    await coordinator.async_shutdown()
+
+
+@pytest.mark.asyncio
+async def test_live_client_reports_connect_failure_and_applies_backoff(hass) -> None:
+    coordinator = CatchSolarLiveCoordinator(
+        hass,
+        {"location_id": 99999, "location_name": "Home"},
+    )
+    api = AsyncMock()
+    api.async_get_access_token.return_value = "token-1"
+    client = CatchSolarLiveClient(
+        hass,
+        api,
+        AsyncMock(),
+        99999,
+        coordinator,
+    )
+    delays = []
+
+    async def sleep(delay):
+        delays.append(delay)
+        client._stopping = True
+
+    socket = _FakeSocket(connect_error=RuntimeError("connection refused"))
+    with (
+        patch("custom_components.catchsolar.telemetry.socketio.AsyncClient", return_value=socket),
+        patch("custom_components.catchsolar.telemetry.asyncio.sleep", side_effect=sleep),
+    ):
+        await client._async_connection_loop()
+
+    assert delays == [5]
+    assert coordinator.last_update_success is False
+    assert socket.disconnect_called is True
+
+    await coordinator.async_shutdown()
