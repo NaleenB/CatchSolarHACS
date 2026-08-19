@@ -141,3 +141,18 @@ async def test_runtime_reports_long_polling_gap() -> None:
     snapshot = await tracker.async_process(True, _dt("2026-06-29T01:00:00+00:00"))
 
     assert snapshot.data_gap_seconds == pytest.approx(3600)
+
+
+@pytest.mark.asyncio
+async def test_runtime_does_not_extrapolate_when_state_is_unknown() -> None:
+    tracker = _tracker()
+
+    await tracker.async_process(True, _dt("2026-06-29T00:00:00+00:00"))
+    snapshot = tracker.get_snapshot(
+        _dt("2026-06-29T01:00:00+00:00"),
+        extrapolate_current_interval=False,
+    )
+
+    assert snapshot.runtime_total_seconds == pytest.approx(0)
+    assert snapshot.data_gap_seconds == pytest.approx(3600)
+    assert snapshot.primary_load_on is True

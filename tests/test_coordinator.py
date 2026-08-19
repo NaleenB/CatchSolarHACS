@@ -74,3 +74,30 @@ async def test_coordinator_uses_configured_location_without_polling_locations(ha
     assert data["location"] == {"id": 1234, "name": "Home"}
     assert data["devices"][0]["load_state"] == 1
     api.async_get_locations.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_coordinator_freezes_runtime_when_primary_state_is_unknown(hass) -> None:
+    api = AsyncMock()
+    api.async_get_devices.return_value = [
+        {
+            "online": 1,
+            "loadState": None,
+            "device": {"id": 123, "controllingLoad": None},
+        }
+    ]
+    snapshot = Mock(as_dict=Mock(return_value={"primary_load_on": True}))
+    runtime_tracker = Mock()
+    runtime_tracker.get_snapshot.return_value = snapshot
+    coordinator = CatchSolarDataUpdateCoordinator(
+        hass,
+        api,
+        {CONF_LOCATION_ID: 1234, CONF_LOCATION_NAME: "Home"},
+        runtime_tracker,
+    )
+
+    await coordinator._async_update_data()
+
+    runtime_tracker.get_snapshot.assert_called_once()
+    assert runtime_tracker.get_snapshot.call_args.kwargs["extrapolate_current_interval"] is False
+    runtime_tracker.async_process.assert_not_called()

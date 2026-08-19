@@ -49,9 +49,10 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 login = await api.async_login()
                 account_id = login.get("id")
-                if isinstance(account_id, bool) or account_id is None:
+                parsed_account_id = _safe_int(account_id)
+                if parsed_account_id is None:
                     raise CatchSolarApiError("Login response did not contain an account id")
-                self._account_id = int(account_id)
+                self._account_id = parsed_account_id
                 self._locations = await api.async_get_locations()
                 if not self._locations:
                     errors["base"] = "no_locations"

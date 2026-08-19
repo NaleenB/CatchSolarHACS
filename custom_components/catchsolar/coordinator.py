@@ -61,7 +61,10 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             primary_load_state = primary_device.get("load_state")
             processed_at = dt_util.utcnow()
             if primary_load_state is None:
-                runtime_snapshot = self.runtime_tracker.get_snapshot(processed_at)
+                runtime_snapshot = self.runtime_tracker.get_snapshot(
+                    processed_at,
+                    extrapolate_current_interval=False,
+                )
             else:
                 runtime_snapshot = await self.runtime_tracker.async_process(
                     int(primary_load_state) == 1,

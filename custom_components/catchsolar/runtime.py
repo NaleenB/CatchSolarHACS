@@ -208,12 +208,25 @@ class PrimaryLoadRuntimeTracker:
             self._last_persisted_at = processed_at
         return self.get_snapshot(processed_at)
 
-    def get_snapshot(self, now: datetime | None = None) -> RuntimeSnapshot:
+    def get_snapshot(
+        self,
+        now: datetime | None = None,
+        *,
+        extrapolate_current_interval: bool = True,
+    ) -> RuntimeSnapshot:
         processed_at = dt_util.as_utc(now or dt_util.utcnow())
         if (
             self._state.last_processed_at is not None
             and processed_at < self._state.last_processed_at
         ):
+            processed_at = self._state.last_processed_at
+
+        data_gap_seconds = self._last_data_gap_seconds
+        if not extrapolate_current_interval and self._state.last_processed_at is not None:
+            data_gap_seconds = max(
+                (processed_at - self._state.last_processed_at).total_seconds(),
+                0.0,
+            )
             processed_at = self._state.last_processed_at
 
         trailing_window_start = processed_at - _TRAILING_WINDOW
@@ -252,7 +265,7 @@ class PrimaryLoadRuntimeTracker:
             current_interval_start=current_interval_start,
             last_processed_at=self._state.last_processed_at,
             primary_load_on=current_interval_start is not None,
-            data_gap_seconds=self._last_data_gap_seconds,
+            data_gap_seconds=data_gap_seconds,
         )
 
     def _trim_recent_intervals(self, now: datetime) -> None:
