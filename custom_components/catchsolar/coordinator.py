@@ -19,7 +19,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL_SECONDS,
 )
 from .parsing import normalize_device_entry, pick_primary_device
-from .runtime import PrimaryLoadRuntimeTracker
+from .runtime import PrimaryLoadRuntimeTracker, RuntimeTarget
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,9 +66,14 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
                 or {}
             )
+            runtime_target = RuntimeTarget(
+                location_id=location_id,
+                primary_device_id=primary_device.get("id"),
+            )
             primary_load_state = primary_device.get("load_state")
             processed_at = dt_util.utcnow()
             if primary_load_state is None:
+                await self.runtime_tracker.async_load(runtime_target)
                 runtime_snapshot = self.runtime_tracker.get_snapshot(
                     processed_at,
                     extrapolate_current_interval=False,
@@ -77,6 +82,7 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 runtime_snapshot = await self.runtime_tracker.async_process(
                     int(primary_load_state) == 1,
                     processed_at,
+                    runtime_target,
                 )
 
             return {

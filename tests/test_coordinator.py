@@ -88,6 +88,7 @@ async def test_coordinator_freezes_runtime_when_primary_state_is_unknown(hass) -
     ]
     snapshot = Mock(as_dict=Mock(return_value={"primary_load_on": True}))
     runtime_tracker = Mock()
+    runtime_tracker.async_load = AsyncMock()
     runtime_tracker.get_snapshot.return_value = snapshot
     coordinator = CatchSolarDataUpdateCoordinator(
         hass,

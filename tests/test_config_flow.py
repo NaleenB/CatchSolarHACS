@@ -272,6 +272,7 @@ async def test_reconfigure_allows_same_account_location_change(hass) -> None:
     flow._abort_if_unique_id_configured.assert_called_once_with()
     flow.async_update_reload_and_abort.assert_called_once_with(
         entry,
+        title="Away",
         unique_id="42:5678",
         data_updates={
             CONF_USERNAME: "new@example.com",

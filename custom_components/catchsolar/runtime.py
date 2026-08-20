@@ -85,12 +85,39 @@ class RuntimeSnapshot:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class RuntimeTarget:
+    location_id: int
+    primary_device_id: int | None
+
+    @classmethod
+    def from_dict(cls, payload: Any) -> RuntimeTarget | None:
+        if not isinstance(payload, dict):
+            return None
+        location_id = payload.get("location_id")
+        primary_device_id = payload.get("primary_device_id")
+        if isinstance(location_id, bool) or not isinstance(location_id, int):
+            return None
+        if primary_device_id is not None and (
+            isinstance(primary_device_id, bool) or not isinstance(primary_device_id, int)
+        ):
+            return None
+        return cls(location_id, primary_device_id)
+
+    def as_dict(self) -> dict[str, int | None]:
+        return {
+            "location_id": self.location_id,
+            "primary_device_id": self.primary_device_id,
+        }
+
+
 @dataclass(slots=True)
 class RuntimeState:
     total_runtime_seconds: float = 0.0
     current_interval_start: datetime | None = None
     recent_intervals: list[RuntimeInterval] = field(default_factory=list)
     last_processed_at: datetime | None = None
+    target: RuntimeTarget | None = None
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any] | None) -> RuntimeState:
@@ -119,15 +146,19 @@ class RuntimeState:
             current_interval_start=current_interval_start,
             recent_intervals=intervals,
             last_processed_at=last_processed_at,
+            target=RuntimeTarget.from_dict(payload.get("target")),
         )
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "total_runtime_seconds": self.total_runtime_seconds,
             "current_interval_start": _serialize_datetime(self.current_interval_start),
             "recent_intervals": [interval.as_dict() for interval in self.recent_intervals],
             "last_processed_at": _serialize_datetime(self.last_processed_at),
         }
+        if self.target is not None:
+            payload["target"] = self.target.as_dict()
+        return payload
 
 
 class PrimaryLoadRuntimeTracker:
@@ -142,12 +173,16 @@ class PrimaryLoadRuntimeTracker:
         self._last_persisted_at: datetime | None = None
         self._last_data_gap_seconds = 0.0
 
-    async def async_load(self) -> None:
+    async def async_load(self, target: RuntimeTarget | None = None) -> None:
         if self._loaded:
+            if target is not None:
+                await self._async_prepare_target(target)
             return
         self._state = RuntimeState.from_dict(await self._store.async_load())
         self._loaded = True
         self._last_persisted_at = self._state.last_processed_at
+        if target is not None:
+            await self._async_prepare_target(target)
 
     async def async_delete(self) -> None:
         self._state = RuntimeState()
@@ -155,8 +190,13 @@ class PrimaryLoadRuntimeTracker:
         self._last_persisted_at = None
         await self._store.async_remove()
 
-    async def async_process(self, load_is_on: bool, now: datetime | None = None) -> RuntimeSnapshot:
-        await self.async_load()
+    async def async_process(
+        self,
+        load_is_on: bool,
+        now: datetime | None = None,
+        target: RuntimeTarget | None = None,
+    ) -> RuntimeSnapshot:
+        await self.async_load(target)
 
         processed_at = dt_util.as_utc(now or dt_util.utcnow())
         if (
@@ -207,6 +247,22 @@ class PrimaryLoadRuntimeTracker:
             await self._store.async_save(self._state.as_dict())
             self._last_persisted_at = processed_at
         return self.get_snapshot(processed_at)
+
+    async def _async_prepare_target(self, target: RuntimeTarget) -> None:
+        if self._state.target == target:
+            return
+
+        if self._state.target is not None:
+            self._state = RuntimeState(target=target)
+            self._last_persisted_at = None
+            self._last_data_gap_seconds = 0.0
+        else:
+            # Stores created before target metadata was introduced retain their
+            # history and adopt the current target on first load.
+            self._state.target = target
+
+        await self._store.async_save(self._state.as_dict())
+        self._last_persisted_at = self._state.last_processed_at
 
     def get_snapshot(
         self,

@@ -268,6 +268,7 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             options.pop(CONF_PRIMARY_DEVICE_ID, None)
         return self.async_update_reload_and_abort(
             entry,
+            title=location.get("name") or f"Catch Solar {location_id}",
             unique_id=unique_id,
             data_updates={
                 CONF_USERNAME: self._username,
