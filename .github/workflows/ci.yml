@@ -28,7 +28,7 @@ jobs:
       - name: Mypy
         run: mypy
       - name: Verify Home Assistant test harness
-        run: python -c "import homeassistant; print(homeassistant.__version__)"
+        run: python -c "from importlib.metadata import version; print(version('homeassistant'))"
       - name: Pytest
         run: pytest --cov=custom_components/catchsolar --cov-report=term-missing --cov-fail-under=75
       - name: Compile sources
@@ -52,8 +52,9 @@ jobs:
           "python-socketio>=5.0,<6.0"
       - name: Verify latest Home Assistant canary version
         run: >-
-          python -c 'import homeassistant; from packaging.version import Version;
-          version = Version(homeassistant.__version__); print(f"Home Assistant {version}");
+          python -c 'from importlib.metadata import version as package_version;
+          from packaging.version import Version; version = Version(package_version("homeassistant"));
+          print(f"Home Assistant {version}");
           assert version >= Version("2026.7.0"), f"canary resolved {version}, expected >= 2026.7.0"'
       - name: Run latest Home Assistant canary
         run: >-
