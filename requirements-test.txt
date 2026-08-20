@@ -3,7 +3,7 @@
 # Home Assistant test dependencies.
 ruff==0.16.3
 mypy==2.3.1
-pytest==9.0.3
+pytest==9.1.1
 pytest-cov==7.1.0
 pytest-homeassistant-custom-component==0.13.326
 python-socketio==5.16.2
