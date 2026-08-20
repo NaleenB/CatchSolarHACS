@@ -5,5 +5,5 @@ ruff==0.16.3
 mypy==2.3.1
 pytest==9.0.3
 pytest-cov==7.0.0
-pytest-homeassistant-custom-component==0.13.315
+pytest-homeassistant-custom-component==0.13.326
 python-socketio==5.16.2
