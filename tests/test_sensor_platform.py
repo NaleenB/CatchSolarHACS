@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from custom_components.catchsolar.const import DOMAIN
+from custom_components.catchsolar.runtime_data import CatchSolarRuntimeData
 from custom_components.catchsolar.sensor import (
     CatchSolarDeviceMetadataSensor,
     CatchSolarPrimaryLoadRuntimeSensor,
@@ -49,8 +49,14 @@ async def test_sensor_setup_adds_runtime_sensors_once_at_location_scope() -> Non
         config={"primary_load_label": "Water Heater"},
     )
     coordinator.async_add_listener = lambda callback: lambda: None
-    hass = SimpleNamespace(data={DOMAIN: {"entry-1": {"coordinator": coordinator}}})
-    entry = SimpleNamespace(entry_id="entry-1")
+    entry = SimpleNamespace(
+        entry_id="entry-1",
+        runtime_data=CatchSolarRuntimeData(
+            coordinator=coordinator,
+            runtime_tracker=SimpleNamespace(),
+        ),
+    )
+    hass = SimpleNamespace()
     entry.async_on_unload = lambda callback: None
     added = []
 

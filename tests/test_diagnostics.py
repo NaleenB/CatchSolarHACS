@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from custom_components.catchsolar.const import DOMAIN
 from custom_components.catchsolar.diagnostics import async_get_config_entry_diagnostics
+from custom_components.catchsolar.runtime_data import CatchSolarRuntimeData
 
 
 @pytest.mark.asyncio
@@ -16,18 +16,13 @@ async def test_diagnostics_track_experimental_feature_state() -> None:
         entry_id="test-entry",
         data={"enable_live_data": True},
         options={"enable_daily_energy": False},
+        runtime_data=CatchSolarRuntimeData(
+            coordinator=core,
+            runtime_tracker=SimpleNamespace(),
+            live_coordinator=live,
+        ),
     )
-    hass = SimpleNamespace(
-        data={
-            DOMAIN: {
-                entry.entry_id: {
-                    "coordinator": core,
-                    "live_coordinator": live,
-                    "daily_energy_coordinator": None,
-                }
-            }
-        }
-    )
+    hass = SimpleNamespace()
 
     result = await async_get_config_entry_diagnostics(hass, entry)
 

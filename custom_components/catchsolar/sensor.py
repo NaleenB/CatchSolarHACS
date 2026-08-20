@@ -26,14 +26,14 @@ DEVICE_SENSOR_KEYS = {
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    integration_data = get_runtime_data(hass, entry)
-    coordinator = integration_data["coordinator"]
+    runtime_data = get_runtime_data(entry)
+    coordinator = runtime_data.coordinator
     entities: list[SensorEntity] = [
         CatchSolarPrimaryLoadStateRawSensor(coordinator),
         CatchSolarPrimaryLoadRuntimeSensor(
             coordinator,
             RUNTIME_SENSOR_24H,
-            "Primary Load Runtime 24h",
+            "Primary Load Runtime Today",
         ),
         CatchSolarPrimaryLoadRuntimeSensor(
             coordinator,
@@ -67,7 +67,7 @@ async def async_setup_entry(
     _add_device_entities()
     remove_listener = coordinator.async_add_listener(_add_device_entities)
     entry.async_on_unload(remove_listener)
-    setup_telemetry_sensors(entry, integration_data, async_add_entities)
+    setup_telemetry_sensors(entry, runtime_data, async_add_entities)
 
 
 class CatchSolarDeviceMetadataSensor(CatchSolarCoordinatorEntity, SensorEntity):

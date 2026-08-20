@@ -13,14 +13,14 @@ from .runtime_data import get_runtime_data
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
-    integration_data = get_runtime_data(hass, entry)
-    coordinator = integration_data["coordinator"]
-    daily_energy_coordinator = integration_data.get("daily_energy_coordinator")
-    live_coordinator = integration_data.get("live_coordinator")
+    runtime_data = get_runtime_data(entry)
+    coordinator = runtime_data.coordinator
+    daily_energy_coordinator = runtime_data.daily_energy_coordinator
+    live_coordinator = runtime_data.live_coordinator
     merged_config = {**entry.data, **entry.options}
     experimental_features = {}
     for feature_id, metadata in EXPERIMENTAL_FEATURES.items():
-        runtime = integration_data.get(metadata["runtime_key"])
+        runtime = getattr(runtime_data, metadata["runtime_key"])
         experimental_features[feature_id] = {
             "introduced_in": metadata["introduced_in"],
             "option": metadata["option"],

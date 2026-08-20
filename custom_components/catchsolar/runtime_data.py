@@ -1,34 +1,34 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING
 
-from .const import DOMAIN
+from homeassistant.config_entries import ConfigEntry
+
+if TYPE_CHECKING:
+    from .coordinator import CatchSolarDataUpdateCoordinator
+    from .runtime import PrimaryLoadRuntimeTracker
+    from .telemetry import (
+        CatchSolarDailyEnergyCoordinator,
+        CatchSolarLiveClient,
+        CatchSolarLiveCoordinator,
+    )
 
 
 @dataclass
 class CatchSolarRuntimeData:
     """Per-config-entry objects that live only while the entry is loaded."""
 
-    coordinator: Any
-    runtime_tracker: Any
-    daily_energy_coordinator: Any = None
-    live_coordinator: Any = None
-    live_client: Any = None
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "coordinator": self.coordinator,
-            "runtime_tracker": self.runtime_tracker,
-            "daily_energy_coordinator": self.daily_energy_coordinator,
-            "live_coordinator": self.live_coordinator,
-            "live_client": self.live_client,
-        }
+    coordinator: CatchSolarDataUpdateCoordinator
+    runtime_tracker: PrimaryLoadRuntimeTracker
+    daily_energy_coordinator: CatchSolarDailyEnergyCoordinator | None = None
+    live_coordinator: CatchSolarLiveCoordinator | None = None
+    live_client: CatchSolarLiveClient | None = None
 
 
-def get_runtime_data(hass, entry) -> dict[str, Any]:
-    """Return typed runtime data, with a test/backward-compatibility fallback."""
-    runtime_data = getattr(entry, "runtime_data", None)
-    if isinstance(runtime_data, CatchSolarRuntimeData):
-        return runtime_data.as_dict()
-    return hass.data[DOMAIN][entry.entry_id]
+type CatchSolarConfigEntry = ConfigEntry[CatchSolarRuntimeData]
+
+
+def get_runtime_data(entry: CatchSolarConfigEntry) -> CatchSolarRuntimeData:
+    """Return the objects owned by a loaded config entry."""
+    return entry.runtime_data

@@ -20,7 +20,7 @@ from .const import (
 )
 from .coordinator import CatchSolarDataUpdateCoordinator
 from .runtime import PrimaryLoadRuntimeTracker
-from .runtime_data import CatchSolarRuntimeData
+from .runtime_data import CatchSolarConfigEntry, CatchSolarRuntimeData
 from .telemetry import (
     CatchSolarDailyEnergyCoordinator,
     CatchSolarLiveClient,
@@ -39,7 +39,7 @@ _RENAMED_ENTITY_UNIQUE_ID_TEMPLATES = (
 )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: CatchSolarConfigEntry) -> bool:
     session = async_get_clientsession(hass)
     api = CatchSolarApiClient(
         session,
@@ -84,9 +84,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         live_client=live_client,
     )
     entry.runtime_data = runtime_data
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = runtime_data.as_dict()
-    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     if live_client is not None:
         await live_client.async_start()
@@ -98,20 +95,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await live_client.async_stop()
         if daily_energy_coordinator is not None:
             await daily_energy_coordinator.async_shutdown()
-        hass.data[DOMAIN].pop(entry.entry_id, None)
-        entry.runtime_data = None
         raise
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    data = getattr(entry, "runtime_data", None)
-    if isinstance(data, CatchSolarRuntimeData):
-        data = data.as_dict()
-    else:
-        data = hass.data[DOMAIN].get(entry.entry_id, {})
-    live_client = data.get("live_client")
-    daily_energy_coordinator = data.get("daily_energy_coordinator")
+async def async_unload_entry(hass: HomeAssistant, entry: CatchSolarConfigEntry) -> bool:
+    runtime_data = entry.runtime_data
+    if runtime_data is None:
+        return True
+    live_client = runtime_data.live_client
+    daily_energy_coordinator = runtime_data.daily_energy_coordinator
     if live_client is not None:
         await live_client.async_stop()
 
@@ -119,20 +112,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         if daily_energy_coordinator is not None:
             await daily_energy_coordinator.async_shutdown()
-        hass.data[DOMAIN].pop(entry.entry_id, None)
-        entry.runtime_data = None
     elif live_client is not None:
         await live_client.async_start()
     return unload_ok
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    runtime_data = getattr(entry, "runtime_data", None)
-    if isinstance(runtime_data, CatchSolarRuntimeData):
-        runtime_data = runtime_data.as_dict()
-    else:
-        runtime_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
-    runtime_tracker = runtime_data.get("runtime_tracker")
+async def async_remove_entry(hass: HomeAssistant, entry: CatchSolarConfigEntry) -> None:
+    runtime_data = entry.runtime_data
+    runtime_tracker = runtime_data.runtime_tracker if runtime_data is not None else None
     if runtime_tracker is None:
         runtime_tracker = PrimaryLoadRuntimeTracker(hass, entry.entry_id)
         await runtime_tracker.async_load()
@@ -140,10 +127,30 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: ConfigEntry, device_entry: dr.DeviceEntry
+    hass: HomeAssistant, entry: CatchSolarConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
-    identifiers = {identifier for identifier in device_entry.identifiers if identifier[0] == DOMAIN}
-    return bool(identifiers)
+    """Allow registry deletion only after Catch no longer reports the device."""
+    runtime_data = entry.runtime_data
+    if runtime_data is None:
+        return False
+
+    known_identifiers: set[tuple[str, str]] = set()
+    core_data = runtime_data.coordinator.data or {}
+    location_id = (core_data.get("location") or {}).get("id")
+    if location_id is not None:
+        known_identifiers.add((DOMAIN, f"location_{location_id}"))
+    for device in core_data.get("devices", []):
+        device_id = device.get("id")
+        if device_id is not None:
+            known_identifiers.add((DOMAIN, f"device_{device_id}"))
+
+    live_data = runtime_data.live_coordinator.data if runtime_data.live_coordinator else {}
+    for actor in live_data.get("actors", []):
+        actor_id = actor.get("id")
+        if actor_id is not None and location_id is not None:
+            known_identifiers.add((DOMAIN, f"location_{location_id}_actor_{actor_id}"))
+
+    return not any(identifier in known_identifiers for identifier in device_entry.identifiers)
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -179,10 +186,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.config_entries.async_update_entry(entry, options=options, version=3)
     return True
-
-
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:

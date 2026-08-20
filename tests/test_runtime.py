@@ -7,7 +7,11 @@ from zoneinfo import ZoneInfo
 import pytest
 from homeassistant.util import dt as dt_util
 
-from custom_components.catchsolar.runtime import PrimaryLoadRuntimeTracker, RuntimeState
+from custom_components.catchsolar.runtime import (
+    PrimaryLoadRuntimeTracker,
+    RuntimeState,
+    RuntimeTarget,
+)
 
 
 class _MemoryStore:
@@ -131,6 +135,110 @@ async def test_runtime_total_persists_after_save_and_restore() -> None:
 
     assert snapshot.runtime_total_seconds == pytest.approx(5400)
     assert snapshot.runtime_24h_seconds == pytest.approx(5400)
+
+
+@pytest.mark.asyncio
+async def test_legacy_runtime_adopts_current_target_without_losing_history() -> None:
+    tracker = _tracker(
+        {
+            "total_runtime_seconds": 5400,
+            "current_interval_start": None,
+            "recent_intervals": [],
+            "last_processed_at": "2026-06-29T01:30:00+00:00",
+        }
+    )
+    target = RuntimeTarget(location_id=1234, primary_device_id=10)
+
+    await tracker.async_load(target)
+
+    assert tracker._state.target == target
+    assert tracker.get_snapshot(_dt("2026-06-29T02:00:00+00:00")).runtime_total_seconds == 5400
+    assert tracker._store.data["target"] == {
+        "location_id": 1234,
+        "primary_device_id": 10,
+    }
+
+
+@pytest.mark.asyncio
+async def test_unresolved_primary_preserves_existing_target_and_history() -> None:
+    tracker = _tracker(
+        {
+            "total_runtime_seconds": 430 * 3600,
+            "current_interval_start": None,
+            "recent_intervals": [],
+            "last_processed_at": "2026-06-29T01:30:00+00:00",
+            "target": {"location_id": 1234, "primary_device_id": 10},
+        }
+    )
+    target = RuntimeTarget(location_id=1234, primary_device_id=10)
+
+    await tracker.async_load()
+    unknown_snapshot = tracker.get_snapshot(
+        _dt("2026-06-29T02:00:00+00:00"),
+        extrapolate_current_interval=False,
+    )
+    resolved_snapshot = await tracker.async_process(
+        False,
+        _dt("2026-06-29T02:10:00+00:00"),
+        target,
+    )
+
+    assert unknown_snapshot.runtime_total_seconds == pytest.approx(430 * 3600)
+    assert resolved_snapshot.runtime_total_seconds == pytest.approx(430 * 3600)
+    assert tracker._state.target == target
+
+
+@pytest.mark.asyncio
+async def test_unresolved_primary_preserves_legacy_history_before_target_adoption() -> None:
+    tracker = _tracker(
+        {
+            "total_runtime_seconds": 430 * 3600,
+            "current_interval_start": None,
+            "recent_intervals": [],
+            "last_processed_at": "2026-06-29T01:30:00+00:00",
+        }
+    )
+    target = RuntimeTarget(location_id=1234, primary_device_id=10)
+
+    await tracker.async_load()
+    unknown_snapshot = tracker.get_snapshot(
+        _dt("2026-06-29T02:00:00+00:00"),
+        extrapolate_current_interval=False,
+    )
+    resolved_snapshot = await tracker.async_process(
+        False,
+        _dt("2026-06-29T02:10:00+00:00"),
+        target,
+    )
+
+    assert unknown_snapshot.runtime_total_seconds == pytest.approx(430 * 3600)
+    assert resolved_snapshot.runtime_total_seconds == pytest.approx(430 * 3600)
+    assert tracker._state.target == target
+
+
+@pytest.mark.asyncio
+async def test_runtime_target_change_resets_history_and_open_interval() -> None:
+    tracker = _tracker(
+        {
+            "total_runtime_seconds": 5400,
+            "current_interval_start": "2026-06-29T00:10:00+00:00",
+            "recent_intervals": [],
+            "last_processed_at": "2026-06-29T01:30:00+00:00",
+            "target": {"location_id": 1234, "primary_device_id": 10},
+        }
+    )
+    new_target = RuntimeTarget(location_id=5678, primary_device_id=20)
+
+    snapshot = await tracker.async_process(
+        False,
+        _dt("2026-06-29T02:00:00+00:00"),
+        new_target,
+    )
+
+    assert snapshot.runtime_total_seconds == 0
+    assert snapshot.current_interval_start is None
+    assert snapshot.primary_load_on is False
+    assert tracker._state.target == new_target
 
 
 @pytest.mark.asyncio

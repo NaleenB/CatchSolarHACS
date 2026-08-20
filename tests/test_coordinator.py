@@ -88,6 +88,7 @@ async def test_coordinator_freezes_runtime_when_primary_state_is_unknown(hass) -
     ]
     snapshot = Mock(as_dict=Mock(return_value={"primary_load_on": True}))
     runtime_tracker = Mock()
+    runtime_tracker.async_load = AsyncMock()
     runtime_tracker.get_snapshot.return_value = snapshot
     coordinator = CatchSolarDataUpdateCoordinator(
         hass,
@@ -98,6 +99,7 @@ async def test_coordinator_freezes_runtime_when_primary_state_is_unknown(hass) -
 
     await coordinator._async_update_data()
 
+    runtime_tracker.async_load.assert_awaited_once_with()
     runtime_tracker.get_snapshot.assert_called_once()
     assert runtime_tracker.get_snapshot.call_args.kwargs["extrapolate_current_interval"] is False
     runtime_tracker.async_process.assert_not_called()

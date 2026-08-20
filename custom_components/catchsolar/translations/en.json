@@ -7,6 +7,9 @@
         "data": {
           "username": "Username",
           "password": "Password"
+        },
+        "data_description": {
+          "password": "Your credential is stored in Home Assistant's config entry."
         }
       },
       "location": {
@@ -22,6 +25,24 @@
         "data": {
           "username": "Username",
           "password": "Password"
+        },
+        "data_description": {
+          "password": "Your credential is stored in Home Assistant's config entry."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Catch Solar",
+        "description": "Update the Catch Solar account or selected location.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "reconfigure_location": {
+        "title": "Select location",
+        "description": "Choose the Catch Solar location to use.",
+        "data": {
+          "location_id": "Location"
         }
       }
     },
@@ -29,11 +50,15 @@
       "cannot_connect": "Failed to connect",
       "invalid_auth": "Invalid authentication",
       "no_locations": "No locations returned",
-      "invalid_location": "Invalid location"
+      "invalid_location": "Invalid location",
+      "invalid_primary_device": "Select a relay reported by Catch Solar",
+      "location_not_found": "The configured location is not available to this account"
     },
     "abort": {
       "reauth_successful": "Reauthentication was successful.",
-      "reauth_unsuccessful": "Reauthentication could not be completed."
+      "reauth_unsuccessful": "Reauthentication could not be completed.",
+      "reconfigure_successful": "Catch Solar was reconfigured successfully.",
+      "wrong_account": "These credentials belong to a different Catch Solar account"
     }
   },
   "options": {
@@ -44,7 +69,13 @@
           "scan_interval": "Polling interval (seconds)",
           "enable_live_data": "Enable live Socket.IO telemetry",
           "enable_daily_energy": "Enable daily Energy Dashboard meters",
-          "primary_load_label": "Primary load label"
+          "primary_load_label": "Primary load label",
+          "primary_device_id": "Primary relay"
+        },
+        "data_description": {
+          "scan_interval": "Lower values increase requests to the Catch Solar API.",
+          "enable_live_data": "Live telemetry uses an unofficial read-only Socket.IO endpoint.",
+          "enable_daily_energy": "Daily energy meters poll the API every five minutes."
         }
       }
     }

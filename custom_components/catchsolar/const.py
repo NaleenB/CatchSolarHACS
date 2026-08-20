@@ -17,6 +17,7 @@ CONF_SCAN_INTERVAL = "scan_interval"
 CONF_ENABLE_LIVE_DATA = "enable_live_data"
 CONF_ENABLE_DAILY_ENERGY = "enable_daily_energy"
 CONF_PRIMARY_LOAD_LABEL = "primary_load_label"
+CONF_PRIMARY_DEVICE_ID = "primary_device_id"
 
 DEFAULT_SCAN_INTERVAL_SECONDS = 600
 DEFAULT_ENABLE_LIVE_DATA = False

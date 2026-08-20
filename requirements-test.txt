@@ -1,0 +1,9 @@
+# Keep the normal CI environment aligned with the HA test harness used when
+# this integration was reviewed. The harness release carries its matching
+# Home Assistant test dependencies.
+ruff==0.16.3
+mypy==2.3.1
+pytest==9.0.0
+pytest-cov==7.0.0
+pytest-homeassistant-custom-component==0.13.315
+python-socketio==5.13.0
