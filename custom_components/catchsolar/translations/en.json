@@ -57,6 +57,7 @@
     "abort": {
       "reauth_successful": "Reauthentication was successful.",
       "reauth_unsuccessful": "Reauthentication could not be completed.",
+      "reconfigure_successful": "Catch Solar was reconfigured successfully.",
       "wrong_account": "These credentials belong to a different Catch Solar account"
     }
   },

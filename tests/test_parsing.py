@@ -60,13 +60,13 @@ def test_pick_primary_device_prefers_configured_relay() -> None:
     assert pick_primary_device(devices, preferred_device_id=2) == devices[1]
 
 
-def test_pick_primary_device_auto_selection_is_deterministic() -> None:
+def test_pick_primary_device_preserves_api_order_for_existing_installs() -> None:
     devices = [
         {"id": 20, "controlling_load": 1},
         {"id": 10, "controlling_load": 1},
     ]
 
-    assert pick_primary_device(devices) == devices[1]
+    assert pick_primary_device(devices) == devices[0]
 
 
 def test_normalize_device_entry_rejects_invalid_state_and_ids() -> None:

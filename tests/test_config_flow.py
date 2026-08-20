@@ -244,6 +244,64 @@ async def test_reauth_updates_credentials_only_after_location_validation(hass) -
     )
 
 
+async def test_reconfigure_allows_same_account_location_change(hass) -> None:
+    entry = SimpleNamespace(
+        entry_id="test-entry",
+        unique_id="42:1234",
+        data={
+            CONF_USERNAME: "old@example.com",
+            CONF_PASSWORD: "old-secret",
+            CONF_ACCOUNT_ID: 42,
+            CONF_LOCATION_ID: 1234,
+        },
+        options={CONF_PRIMARY_DEVICE_ID: 9001, CONF_SCAN_INTERVAL: 900},
+    )
+    flow = _attach_hass(CatchSolarConfigFlow(), hass)
+    flow._get_reconfigure_entry = Mock(return_value=entry)
+    flow._account_id = 42
+    flow._username = "new@example.com"
+    flow._password = "new-secret"
+    flow.async_set_unique_id = AsyncMock()
+    flow._abort_if_unique_id_configured = Mock()
+    flow.async_update_reload_and_abort = Mock(return_value={"type": "abort"})
+
+    result = await flow._async_update_reconfigured_entry({"id": 5678, "name": "Away"})
+
+    assert result == {"type": "abort"}
+    flow.async_set_unique_id.assert_awaited_once_with("42:5678")
+    flow._abort_if_unique_id_configured.assert_called_once_with()
+    flow.async_update_reload_and_abort.assert_called_once_with(
+        entry,
+        unique_id="42:5678",
+        data_updates={
+            CONF_USERNAME: "new@example.com",
+            CONF_PASSWORD: "new-secret",
+            CONF_ACCOUNT_ID: 42,
+            CONF_LOCATION_ID: 5678,
+            CONF_LOCATION_NAME: "Away",
+        },
+        options={CONF_SCAN_INTERVAL: 900},
+        reason="reconfigure_successful",
+    )
+
+
+async def test_reconfigure_rejects_credentials_for_another_account(hass) -> None:
+    entry = SimpleNamespace(
+        entry_id="test-entry",
+        unique_id="42:1234",
+        data={CONF_ACCOUNT_ID: 42, CONF_LOCATION_ID: 1234},
+        options={},
+    )
+    flow = _attach_hass(CatchSolarConfigFlow(), hass)
+    flow._get_reconfigure_entry = Mock(return_value=entry)
+    flow._account_id = 99
+
+    result = await flow._async_update_reconfigured_entry({"id": 5678, "name": "Away"})
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_account"
+
+
 async def test_options_flow_normalizes_automatic_primary_relay(hass) -> None:
     entry = _config_entry(
         version=1,

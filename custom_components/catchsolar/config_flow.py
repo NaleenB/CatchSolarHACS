@@ -98,14 +98,7 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required("location_id"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=[
-                                {
-                                    "value": str(item["id"]),
-                                    "label": item.get("name") or str(item["id"]),
-                                }
-                                for item in self._locations
-                                if _safe_int(item.get("id")) is not None
-                            ],
+                            options=_location_selector_options(self._locations),
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     )
@@ -249,13 +242,7 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required("location_id"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=[
-                                {
-                                    "value": str(item["id"]),
-                                    "label": item.get("name") or str(item["id"]),
-                                }
-                                for item in self._locations
-                            ],
+                            options=_location_selector_options(self._locations),
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     )
@@ -269,13 +256,19 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         location_id = _safe_int(location.get("id"))
         if location_id is None or self._account_id is None:
             return self.async_abort(reason="invalid_location")
-        await self.async_set_unique_id(f"{self._account_id}:{location_id}")
-        self._abort_if_unique_id_mismatch(reason="wrong_account")
+        if _safe_int(entry.data.get(CONF_ACCOUNT_ID)) != self._account_id:
+            return self.async_abort(reason="wrong_account")
+
+        unique_id = f"{self._account_id}:{location_id}"
+        await self.async_set_unique_id(unique_id)
+        if entry.unique_id != unique_id:
+            self._abort_if_unique_id_configured()
         options = dict(entry.options)
         if _safe_int(entry.data.get(CONF_LOCATION_ID)) != location_id:
             options.pop(CONF_PRIMARY_DEVICE_ID, None)
         return self.async_update_reload_and_abort(
             entry,
+            unique_id=unique_id,
             data_updates={
                 CONF_USERNAME: self._username,
                 CONF_PASSWORD: self._password,
@@ -299,6 +292,19 @@ def _safe_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _location_selector_options(
+    locations: list[dict[str, Any]],
+) -> list[selector.SelectOptionDict]:
+    return [
+        {
+            "value": str(item["id"]),
+            "label": item.get("name") or str(item["id"]),
+        }
+        for item in locations
+        if _safe_int(item.get("id")) is not None
+    ]
 
 
 class CatchSolarOptionsFlow(OptionsFlowWithReload):
@@ -331,7 +337,9 @@ class CatchSolarOptionsFlow(OptionsFlowWithReload):
                 return self.async_create_entry(title="", data=data)
 
         current_primary = _safe_int(entry.options.get(CONF_PRIMARY_DEVICE_ID))
-        primary_options = [{"value": "", "label": "Automatic primary relay"}]
+        primary_options: list[selector.SelectOptionDict] = [
+            {"value": "", "label": "Automatic primary relay"}
+        ]
         primary_options.extend(
             {
                 "value": str(device["id"]),

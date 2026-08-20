@@ -44,7 +44,7 @@ async def test_unload_entry_shuts_down_daily_energy_coordinator(hass) -> None:
 
     live_client.async_stop.assert_awaited_once()
     daily_energy_coordinator.async_shutdown.assert_awaited_once()
-    assert entry.runtime_data is None
+    assert entry.runtime_data is not None
 
 
 @pytest.mark.asyncio
@@ -100,7 +100,7 @@ async def test_setup_failure_shuts_down_daily_energy_coordinator(hass) -> None:
     live_client.async_start.assert_awaited_once()
     live_client.async_stop.assert_awaited_once()
     daily_energy_coordinator.async_shutdown.assert_awaited_once()
-    assert entry.runtime_data is None
+    assert entry.runtime_data is not None
 
 
 @pytest.mark.asyncio

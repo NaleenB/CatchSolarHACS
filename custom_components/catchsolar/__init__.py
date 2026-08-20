@@ -95,7 +95,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: CatchSolarConfigEntry) -
             await live_client.async_stop()
         if daily_energy_coordinator is not None:
             await daily_energy_coordinator.async_shutdown()
-        entry.runtime_data = None
         raise
     return True
 
@@ -113,7 +112,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: CatchSolarConfigEntry) 
     if unload_ok:
         if daily_energy_coordinator is not None:
             await daily_energy_coordinator.async_shutdown()
-        entry.runtime_data = None
     elif live_client is not None:
         await live_client.async_start()
     return unload_ok
