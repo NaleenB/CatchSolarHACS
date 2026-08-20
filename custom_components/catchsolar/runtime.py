@@ -150,7 +150,7 @@ class RuntimeState:
         )
 
     def as_dict(self) -> dict[str, Any]:
-        payload = {
+        payload: dict[str, Any] = {
             "total_runtime_seconds": self.total_runtime_seconds,
             "current_interval_start": _serialize_datetime(self.current_interval_start),
             "recent_intervals": [interval.as_dict() for interval in self.recent_intervals],
