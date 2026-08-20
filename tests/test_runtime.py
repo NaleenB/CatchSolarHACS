@@ -160,6 +160,63 @@ async def test_legacy_runtime_adopts_current_target_without_losing_history() -> 
 
 
 @pytest.mark.asyncio
+async def test_unresolved_primary_preserves_existing_target_and_history() -> None:
+    tracker = _tracker(
+        {
+            "total_runtime_seconds": 430 * 3600,
+            "current_interval_start": None,
+            "recent_intervals": [],
+            "last_processed_at": "2026-06-29T01:30:00+00:00",
+            "target": {"location_id": 1234, "primary_device_id": 10},
+        }
+    )
+    target = RuntimeTarget(location_id=1234, primary_device_id=10)
+
+    await tracker.async_load()
+    unknown_snapshot = tracker.get_snapshot(
+        _dt("2026-06-29T02:00:00+00:00"),
+        extrapolate_current_interval=False,
+    )
+    resolved_snapshot = await tracker.async_process(
+        False,
+        _dt("2026-06-29T02:10:00+00:00"),
+        target,
+    )
+
+    assert unknown_snapshot.runtime_total_seconds == pytest.approx(430 * 3600)
+    assert resolved_snapshot.runtime_total_seconds == pytest.approx(430 * 3600)
+    assert tracker._state.target == target
+
+
+@pytest.mark.asyncio
+async def test_unresolved_primary_preserves_legacy_history_before_target_adoption() -> None:
+    tracker = _tracker(
+        {
+            "total_runtime_seconds": 430 * 3600,
+            "current_interval_start": None,
+            "recent_intervals": [],
+            "last_processed_at": "2026-06-29T01:30:00+00:00",
+        }
+    )
+    target = RuntimeTarget(location_id=1234, primary_device_id=10)
+
+    await tracker.async_load()
+    unknown_snapshot = tracker.get_snapshot(
+        _dt("2026-06-29T02:00:00+00:00"),
+        extrapolate_current_interval=False,
+    )
+    resolved_snapshot = await tracker.async_process(
+        False,
+        _dt("2026-06-29T02:10:00+00:00"),
+        target,
+    )
+
+    assert unknown_snapshot.runtime_total_seconds == pytest.approx(430 * 3600)
+    assert resolved_snapshot.runtime_total_seconds == pytest.approx(430 * 3600)
+    assert tracker._state.target == target
+
+
+@pytest.mark.asyncio
 async def test_runtime_target_change_resets_history_and_open_interval() -> None:
     tracker = _tracker(
         {

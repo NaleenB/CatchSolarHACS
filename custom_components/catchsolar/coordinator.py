@@ -66,19 +66,32 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
                 or {}
             )
-            runtime_target = RuntimeTarget(
-                location_id=location_id,
-                primary_device_id=primary_device.get("id"),
-            )
+            primary_device_id = primary_device.get("id")
             primary_load_state = primary_device.get("load_state")
             processed_at = dt_util.utcnow()
-            if primary_load_state is None:
+            if primary_device_id is None:
+                # An unresolved relay is not a new runtime target. Load the
+                # existing state and freeze it until identity is known again.
+                await self.runtime_tracker.async_load()
+                runtime_snapshot = self.runtime_tracker.get_snapshot(
+                    processed_at,
+                    extrapolate_current_interval=False,
+                )
+            elif primary_load_state is None:
+                runtime_target = RuntimeTarget(
+                    location_id=location_id,
+                    primary_device_id=primary_device_id,
+                )
                 await self.runtime_tracker.async_load(runtime_target)
                 runtime_snapshot = self.runtime_tracker.get_snapshot(
                     processed_at,
                     extrapolate_current_interval=False,
                 )
             else:
+                runtime_target = RuntimeTarget(
+                    location_id=location_id,
+                    primary_device_id=primary_device_id,
+                )
                 runtime_snapshot = await self.runtime_tracker.async_process(
                     int(primary_load_state) == 1,
                     processed_at,
@@ -88,7 +101,7 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return {
                 "location": location,
                 "devices": devices,
-                "primary_device_id": primary_device.get("id"),
+                "primary_device_id": primary_device_id,
                 "runtime": runtime_snapshot.as_dict(),
                 "last_polled_at": processed_at.isoformat(),
             }

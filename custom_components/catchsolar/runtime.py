@@ -88,7 +88,7 @@ class RuntimeSnapshot:
 @dataclass(frozen=True, slots=True)
 class RuntimeTarget:
     location_id: int
-    primary_device_id: int | None
+    primary_device_id: int
 
     @classmethod
     def from_dict(cls, payload: Any) -> RuntimeTarget | None:
@@ -98,13 +98,13 @@ class RuntimeTarget:
         primary_device_id = payload.get("primary_device_id")
         if isinstance(location_id, bool) or not isinstance(location_id, int):
             return None
-        if primary_device_id is not None and (
-            isinstance(primary_device_id, bool) or not isinstance(primary_device_id, int)
-        ):
+        # A target without a resolved primary relay is not an identity. Treat
+        # older/transient records containing null as legacy state instead.
+        if isinstance(primary_device_id, bool) or not isinstance(primary_device_id, int):
             return None
         return cls(location_id, primary_device_id)
 
-    def as_dict(self) -> dict[str, int | None]:
+    def as_dict(self) -> dict[str, int]:
         return {
             "location_id": self.location_id,
             "primary_device_id": self.primary_device_id,
