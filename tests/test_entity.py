@@ -128,7 +128,7 @@ def test_location_device_name_avoids_bare_numeric_name() -> None:
     entity = CatchSolarPrimaryLoadRuntimeSensor(
         _build_coordinator(),
         "runtime_24h",
-        "Primary Load Runtime 24h",
+        "Primary Load Runtime Today",
     )
 
     assert entity.device_info["name"] == "Catch Solar Location 99999"

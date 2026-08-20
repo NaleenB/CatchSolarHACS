@@ -49,7 +49,7 @@ controllable-device sub-devices when the live feed reports them:
 On the location device you will find:
 
 - **Primary Load State** — binary sensor, on when your primary load is active
-- **Primary Load Runtime 24h** — hours the load ran today (since midnight, local time)
+- **Primary Load Runtime Today** — hours the load ran today (since midnight, local time)
 - **Primary Load Runtime 7d Rolling** — hours the load ran in the last 7 days
 - **Primary Load Runtime Total** — hours the load has run since the integration was installed
 - **Live Mains Power** — positive when importing and negative when exporting
@@ -159,7 +159,7 @@ Home Assistant handle that daily reset when building long-term statistics.
   identity because the feed provides no stable channel ID. Repeated entries
   with the same identity use the last value in the event.
 - The runtime sensors use hours as their native unit and round to 2 decimal places.
-- `Primary Load Runtime 24h` means local-calendar-day runtime since midnight, even though the entity name uses `24h`.
+- `Primary Load Runtime Today` measures local-calendar-day runtime since midnight.
 - Runtime state is persisted by the integration and survives restarts, including the case where the primary load stays on across a restart.
 - Runtime sensors expose `data_gap_seconds` when polling was interrupted long
   enough that the reported runtime should be treated as an estimate.

@@ -51,6 +51,24 @@ def test_pick_primary_device_returns_none_without_controlling_load() -> None:
     assert pick_primary_device(devices) is None
 
 
+def test_pick_primary_device_prefers_configured_relay() -> None:
+    devices = [
+        {"id": 1, "controlling_load": 1},
+        {"id": 2, "controlling_load": 1},
+    ]
+
+    assert pick_primary_device(devices, preferred_device_id=2) == devices[1]
+
+
+def test_pick_primary_device_auto_selection_is_deterministic() -> None:
+    devices = [
+        {"id": 20, "controlling_load": 1},
+        {"id": 10, "controlling_load": 1},
+    ]
+
+    assert pick_primary_device(devices) == devices[1]
+
+
 def test_normalize_device_entry_rejects_invalid_state_and_ids() -> None:
     normalized = normalize_device_entry(
         {"loadState": "invalid", "online": None, "device": {"id": 0, "locationId": "bad"}}

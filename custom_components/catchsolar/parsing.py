@@ -50,11 +50,23 @@ def normalize_device_entry(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def pick_primary_device(devices: list[dict[str, Any]]) -> dict[str, Any] | None:
-    for device in devices:
-        if _binary_value(device.get("controlling_load")) == 1:
-            return device
-    return None
+def pick_primary_device(
+    devices: list[dict[str, Any]], preferred_device_id: int | None = None
+) -> dict[str, Any] | None:
+    """Select the configured relay, or a deterministic automatic candidate."""
+    candidates = [
+        device for device in devices if _binary_value(device.get("controlling_load")) == 1
+    ]
+    if preferred_device_id is not None:
+        return next(
+            (device for device in candidates if device.get("id") == preferred_device_id),
+            None,
+        )
+    return min(
+        candidates,
+        key=lambda device: int(device["id"]) if isinstance(device.get("id"), int) else 0,
+        default=None,
+    )
 
 
 def _positive_int(value: Any) -> int | None:

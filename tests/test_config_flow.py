@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import inspect
-from unittest.mock import AsyncMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
@@ -14,6 +16,7 @@ from custom_components.catchsolar.const import (
     CONF_LOCATION_ID,
     CONF_LOCATION_NAME,
     CONF_PASSWORD,
+    CONF_PRIMARY_DEVICE_ID,
     CONF_PRIMARY_LOAD_LABEL,
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
@@ -119,6 +122,8 @@ async def test_options_flow_returns_user_values(hass) -> None:
     )
     flow = CatchSolarConfigFlow.async_get_options_flow(entry)
     flow.hass = hass
+    flow.handler = entry.entry_id
+    hass.config_entries.async_get_known_entry = Mock(return_value=entry)
 
     result = await flow.async_step_init(
         {
@@ -157,8 +162,118 @@ async def test_options_flow_init_form_uses_existing_defaults(hass) -> None:
     )
     flow = CatchSolarConfigFlow.async_get_options_flow(entry)
     flow.hass = hass
+    flow.handler = entry.entry_id
+    hass.config_entries.async_get_known_entry = Mock(return_value=entry)
 
     result = await flow.async_step_init()
 
     assert result["type"] is FlowResultType.FORM
-    assert flow._config_entry is entry
+
+
+async def test_reauth_rejects_credentials_for_another_account(hass) -> None:
+    entry = SimpleNamespace(
+        entry_id="test-entry",
+        unique_id="42:1234",
+        title="Home",
+        data={
+            CONF_USERNAME: "old@example.com",
+            CONF_PASSWORD: "old-secret",
+            CONF_ACCOUNT_ID: 42,
+            CONF_LOCATION_ID: 1234,
+        },
+        options={},
+    )
+    flow = _attach_hass(CatchSolarConfigFlow(), hass)
+    flow.context = {"entry_id": entry.entry_id}
+    flow._get_reauth_entry = Mock(return_value=entry)
+
+    with patch("custom_components.catchsolar.config_flow.CatchSolarApiClient") as client_cls:
+        client = client_cls.return_value
+        client.async_login = AsyncMock(return_value={"id": 99})
+        client.async_get_locations = AsyncMock(return_value=[{"id": 1234, "name": "Home"}])
+
+        flow.async_set_unique_id = AsyncMock()
+        flow._abort_if_unique_id_mismatch = Mock(side_effect=Exception("wrong account"))
+
+        with pytest.raises(Exception, match="wrong account"):
+            await flow.async_step_reauth_confirm(
+                {CONF_USERNAME: "new@example.com", CONF_PASSWORD: "new-secret"}
+            )
+
+    flow.async_set_unique_id.assert_awaited_once_with("99:1234")
+
+
+async def test_reauth_updates_credentials_only_after_location_validation(hass) -> None:
+    entry = SimpleNamespace(
+        entry_id="test-entry",
+        unique_id="42:1234",
+        title="Home",
+        data={
+            CONF_USERNAME: "old@example.com",
+            CONF_PASSWORD: "old-secret",
+            CONF_ACCOUNT_ID: 42,
+            CONF_LOCATION_ID: 1234,
+        },
+        options={},
+    )
+    flow = _attach_hass(CatchSolarConfigFlow(), hass)
+    flow.context = {"entry_id": entry.entry_id}
+    flow._get_reauth_entry = Mock(return_value=entry)
+
+    with patch("custom_components.catchsolar.config_flow.CatchSolarApiClient") as client_cls:
+        client = client_cls.return_value
+        client.async_login = AsyncMock(return_value={"id": 42})
+        client.async_get_locations = AsyncMock(return_value=[{"id": 1234, "name": "Home"}])
+
+        flow.async_set_unique_id = AsyncMock()
+        flow._abort_if_unique_id_mismatch = Mock()
+        flow.async_update_reload_and_abort = Mock(return_value={"type": "abort"})
+
+        result = await flow.async_step_reauth_confirm(
+            {CONF_USERNAME: "new@example.com", CONF_PASSWORD: "new-secret"}
+        )
+
+    assert result == {"type": "abort"}
+    flow.async_update_reload_and_abort.assert_called_once_with(
+        entry,
+        data_updates={
+            CONF_USERNAME: "new@example.com",
+            CONF_PASSWORD: "new-secret",
+            CONF_ACCOUNT_ID: 42,
+        },
+    )
+
+
+async def test_options_flow_normalizes_automatic_primary_relay(hass) -> None:
+    entry = _config_entry(
+        version=1,
+        minor_version=1,
+        domain="catchsolar",
+        title="Home",
+        data={},
+        options={
+            CONF_SCAN_INTERVAL: 900,
+            CONF_ENABLE_LIVE_DATA: False,
+            CONF_ENABLE_DAILY_ENERGY: False,
+            CONF_PRIMARY_LOAD_LABEL: "Water Heater",
+        },
+        source="user",
+        entry_id="test-entry",
+        discovery_keys={},
+    )
+    flow = CatchSolarConfigFlow.async_get_options_flow(entry)
+    flow.hass = hass
+    flow.handler = entry.entry_id
+    hass.config_entries.async_get_known_entry = Mock(return_value=entry)
+
+    result = await flow.async_step_init(
+        {
+            CONF_SCAN_INTERVAL: 300,
+            CONF_ENABLE_LIVE_DATA: False,
+            CONF_ENABLE_DAILY_ENERGY: False,
+            CONF_PRIMARY_LOAD_LABEL: "Water Heater",
+            CONF_PRIMARY_DEVICE_ID: "",
+        }
+    )
+
+    assert CONF_PRIMARY_DEVICE_ID not in result["data"]

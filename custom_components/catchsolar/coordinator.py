@@ -14,6 +14,7 @@ from .api import CatchSolarApiAuthError, CatchSolarApiClient, CatchSolarApiError
 from .const import (
     CONF_LOCATION_ID,
     CONF_LOCATION_NAME,
+    CONF_PRIMARY_DEVICE_ID,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL_SECONDS,
 )
@@ -57,7 +58,14 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 for item in await self.api.async_get_devices(location_id)
             ]
 
-            primary_device = pick_primary_device(devices) or {}
+            configured_primary_id = self.config.get(CONF_PRIMARY_DEVICE_ID)
+            primary_device = (
+                pick_primary_device(
+                    devices,
+                    int(configured_primary_id) if configured_primary_id is not None else None,
+                )
+                or {}
+            )
             primary_load_state = primary_device.get("load_state")
             processed_at = dt_util.utcnow()
             if primary_load_state is None:

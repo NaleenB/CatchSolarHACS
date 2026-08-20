@@ -13,7 +13,7 @@ from .runtime_data import get_runtime_data
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    coordinator = get_runtime_data(hass, entry)["coordinator"]
+    coordinator = get_runtime_data(entry).coordinator
     async_add_entities([CatchSolarPrimaryLoadStateBinarySensor(coordinator)])
     seen_device_ids: set[int] = set()
 

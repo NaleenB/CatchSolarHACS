@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LIVE_PUBLISH_INTERVAL_SECONDS
 from .entity import CatchSolarLocationEntity
+from .runtime_data import CatchSolarRuntimeData
 
 LIVE_SITE_POWER_SENSOR_KEYS = {
     "mains_power": "Live Mains Power",
@@ -40,17 +41,17 @@ DAILY_ENERGY_SENSOR_KEYS = {
 
 def setup_telemetry_sensors(
     entry: ConfigEntry,
-    integration_data: dict[str, Any],
+    runtime_data: CatchSolarRuntimeData,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the optional live and daily-energy entities."""
     entities: list[SensorEntity] = []
-    daily_energy_coordinator = integration_data.get("daily_energy_coordinator")
+    daily_energy_coordinator = runtime_data.daily_energy_coordinator
     if daily_energy_coordinator is not None:
         for key, name in DAILY_ENERGY_SENSOR_KEYS.items():
             entities.append(CatchSolarDailyEnergySensor(daily_energy_coordinator, key, name))
 
-    live_coordinator = integration_data.get("live_coordinator")
+    live_coordinator = runtime_data.live_coordinator
     if live_coordinator is not None:
         for key, name in LIVE_SITE_POWER_SENSOR_KEYS.items():
             entities.append(CatchSolarLiveSiteSensor(live_coordinator, key, name, "site_power"))
