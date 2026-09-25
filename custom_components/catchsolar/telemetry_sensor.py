@@ -97,8 +97,14 @@ def setup_telemetry_sensors(
 
         for actor in actors:
             actor_id = actor["id"]
+            # Actor power is deliberately not discovered. The upstream `pwr`
+            # field is not a usable measurement for the relay actors this
+            # integration supports: it reports 0 for a solar relay even while
+            # the load it controls is demonstrably running, so the entity read
+            # a permanent, plausible-looking 0 W. Only state and SoC are
+            # exposed. Config-entry version 4 removes the entities that were
+            # already created this way.
             candidates = (
-                ("power", actor.get("power"), CatchSolarActorPowerSensor),
                 ("state", actor.get("state"), CatchSolarActorStateSensor),
                 ("soc", actor.get("soc"), CatchSolarActorSocSensor),
             )
@@ -226,28 +232,6 @@ class CatchSolarLiveActorEntity(CoordinatorEntity):
             ),
         )
         return cast(DeviceInfo, device_info)
-
-
-class CatchSolarActorPowerSensor(CatchSolarLiveActorEntity, SensorEntity):
-    _attr_device_class = SensorDeviceClass.POWER
-    _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_native_unit_of_measurement = UnitOfPower.WATT
-    _attr_name = "Live Power"
-
-    def __init__(self, coordinator, actor_id: str) -> None:
-        super().__init__(coordinator, actor_id)
-        location_id = self.coordinator.data.get("location", {}).get("id", "unknown")
-        self._attr_unique_id = f"{location_id}_actor_{actor_id}_live_power"
-
-    @property
-    def native_value(self):
-        return (self.actor or {}).get("power")
-
-    @property
-    def available(self) -> bool:
-        # A missing reading must read unavailable, not a stale or unknown
-        # value that looks like valid telemetry.
-        return super().available and self.native_value is not None
 
 
 class CatchSolarActorStateSensor(CatchSolarLiveActorEntity, SensorEntity):

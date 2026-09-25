@@ -18,12 +18,12 @@ from custom_components.catchsolar.sensor import (
     CatchSolarPrimaryLoadStateRawSensor,
 )
 from custom_components.catchsolar.telemetry_sensor import (
-    CatchSolarActorPowerSensor,
     CatchSolarActorSocSensor,
     CatchSolarActorStateSensor,
     CatchSolarChannelPowerSensor,
     CatchSolarDailyEnergySensor,
     CatchSolarLiveSiteSensor,
+    setup_telemetry_sensors,
 )
 
 
@@ -207,17 +207,15 @@ def test_live_entities_read_site_actor_and_channel_data() -> None:
         "Live Mains Power",
         "site_power",
     )
-    actor_power = CatchSolarActorPowerSensor(coordinator, "actor-1")
     actor_state = CatchSolarActorStateSensor(coordinator, "actor-1")
     actor_soc = CatchSolarActorSocSensor(coordinator, "actor-1")
     channel = CatchSolarChannelPowerSensor(coordinator, "LOAD:Hot Water")
 
     assert mains.native_value == -250
     assert mains.extra_state_attributes["sign_convention"] == ("positive import, negative export")
-    assert actor_power.native_value == -1200
     assert actor_state.native_value == "CHARGING"
     assert actor_soc.native_value == 73
-    assert actor_power.device_info["name"] == "Battery"
+    assert actor_state.device_info["name"] == "Battery"
     assert channel.native_value == 3600
     assert channel.extra_state_attributes["channel_type"] == "LOAD"
 
@@ -290,7 +288,7 @@ def test_live_actor_device_links_to_location_device(monkeypatch) -> None:
     coordinator = _build_live_coordinator()
     coordinator.location_device_id = "parent-device-id"
 
-    device_info = CatchSolarActorPowerSensor(coordinator, "actor-1").device_info
+    device_info = CatchSolarActorStateSensor(coordinator, "actor-1").device_info
 
     assert device_info["via_device_id"] == "parent-device-id"
     assert "via_device" not in device_info
@@ -312,7 +310,6 @@ def test_actor_and_channel_sensors_are_unavailable_without_a_reading() -> None:
         channels=[{"key": "LOAD:Hot Water", "name": "Hot Water", "type": "LOAD", "power": None}],
     )
 
-    assert CatchSolarActorPowerSensor(coordinator, "actor-1").available is False
     assert CatchSolarActorStateSensor(coordinator, "actor-1").available is False
     assert CatchSolarActorSocSensor(coordinator, "actor-1").available is False
     assert CatchSolarChannelPowerSensor(coordinator, "LOAD:Hot Water").available is False
@@ -321,7 +318,29 @@ def test_actor_and_channel_sensors_are_unavailable_without_a_reading() -> None:
 def test_actor_and_channel_sensors_stay_available_with_a_reading() -> None:
     coordinator = _build_live_coordinator()
 
-    assert CatchSolarActorPowerSensor(coordinator, "actor-1").available is True
     assert CatchSolarActorStateSensor(coordinator, "actor-1").available is True
     assert CatchSolarActorSocSensor(coordinator, "actor-1").available is True
     assert CatchSolarChannelPowerSensor(coordinator, "LOAD:Hot Water").available is True
+
+
+def test_live_discovery_skips_actor_power_but_keeps_state_and_soc() -> None:
+    """Actor `pwr` is not a usable measurement, so no power entity is created.
+
+    It reports 0 for a solar relay even while the load it controls is running,
+    so the sensor read a permanent, plausible-looking 0 W.
+    """
+    live_coordinator = _build_live_coordinator()
+    live_coordinator.async_add_listener = lambda _callback: lambda: None
+    runtime_data = SimpleNamespace(
+        daily_energy_coordinator=None,
+        live_coordinator=live_coordinator,
+    )
+    entry = SimpleNamespace(async_on_unload=lambda _callback: None)
+    added: list = []
+
+    setup_telemetry_sensors(entry, runtime_data, added.extend)
+
+    created = [type(entity).__name__ for entity in added]
+    assert "CatchSolarActorStateSensor" in created
+    assert "CatchSolarActorSocSensor" in created
+    assert not any("ActorPower" in name for name in created)

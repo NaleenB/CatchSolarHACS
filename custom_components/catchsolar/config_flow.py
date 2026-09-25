@@ -30,7 +30,10 @@ from .const import (
 
 
 class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 3
+    # Must stay in step with async_migrate_entry(): Home Assistant only calls
+    # the migration when the stored entry version differs from this value, so a
+    # lower VERSION here silently skips every migration below it.
+    VERSION = 4
 
     def __init__(self) -> None:
         self._account_id: int | None = None

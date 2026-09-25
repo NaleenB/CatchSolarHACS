@@ -41,11 +41,19 @@ _REMOVED_ENTITY_UNIQUE_ID_TEMPLATES = (
 _RENAMED_ENTITY_UNIQUE_ID_TEMPLATES = (
     ("{location_id}_live_export_limit", "{location_id}_live_active_control"),
 )
-# Live channel power sensors created from a channel that carried only a type
-# (no name), e.g. "8382_channel_MAINS:_live_power". These duplicated the
-# site-level live power sensors and are no longer produced. The "[^:]*" is an
-# intentional regex class matching a channel type, so it is not escaped.
-_EMPTY_CHANNEL_NAME_UNIQUE_ID_SUFFIX = r"_channel_[^:]*:_live_power"
+# Live sensor unique-id suffixes that are no longer produced, each appended to
+# "{location_id}". "[^:]*" is an intentional regex class, so these are not
+# escaped. Config-entry version 4 deletes the entities already created.
+_RETIRED_LIVE_ENTITY_UNIQUE_ID_SUFFIXES = (
+    # Channel power sensors built from a channel that carried only a type, e.g.
+    # "8382_channel_MAINS:_live_power". Their generated entity name collided
+    # with the site-level "Live Mains Power" sensor, leaving a `_2` duplicate.
+    r"_channel_[^:]*:_live_power",
+    # Actor power sensors. The upstream `pwr` field is not a usable measurement
+    # for the relay actors this integration supports, so these read a permanent,
+    # plausible-looking 0 W (e.g. "8382_actor_GLD.SR.3649_live_power").
+    r"_actor_[^:]*_live_power",
+)
 
 
 def _async_register_location_device(
@@ -193,17 +201,20 @@ async def async_remove_config_entry_device(
     return not any(identifier in known_identifiers for identifier in device_entry.identifiers)
 
 
-def _remove_empty_channel_name_entities(hass: HomeAssistant, location_id: object) -> int:
-    """Delete live channel power sensors keyed off a channel that had no name."""
+def _remove_retired_live_entities(hass: HomeAssistant, location_id: object) -> int:
+    """Delete live sensors this integration no longer produces."""
     registry = er.async_get(hass)
-    pattern = re.compile(
-        "^" + re.escape(str(location_id)) + _EMPTY_CHANNEL_NAME_UNIQUE_ID_SUFFIX + "$"
-    )
+    prefix = re.escape(str(location_id))
+    patterns = [
+        re.compile("^" + prefix + suffix + "$")
+        for suffix in _RETIRED_LIVE_ENTITY_UNIQUE_ID_SUFFIXES
+    ]
     removed = 0
     for entity_entry in list(registry.entities.values()):
         if entity_entry.platform != DOMAIN or entity_entry.domain != "sensor":
             continue
-        if pattern.match(entity_entry.unique_id or ""):
+        unique_id = entity_entry.unique_id or ""
+        if any(pattern.match(unique_id) for pattern in patterns):
             registry.async_remove(entity_entry.entity_id)
             removed += 1
     return removed
@@ -242,7 +253,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     )
 
     if entry.version < 4 and location_id is not None:
-        _remove_empty_channel_name_entities(hass, location_id)
+        _remove_retired_live_entities(hass, location_id)
 
     hass.config_entries.async_update_entry(entry, options=options, version=4)
     return True
