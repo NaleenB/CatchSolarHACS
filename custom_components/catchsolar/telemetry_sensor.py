@@ -6,7 +6,7 @@ runtime platform small and makes the two data paths easy to reason about.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -16,7 +16,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LIVE_PUBLISH_INTERVAL_SECONDS
-from .entity import CatchSolarLocationEntity
+from .entity import (
+    CatchSolarLocationEntity,
+    apply_parent_device_link,
+    location_device_identifier,
+)
 from .runtime_data import CatchSolarRuntimeData
 
 LIVE_SITE_POWER_SENSOR_KEYS = {
@@ -208,13 +212,20 @@ class CatchSolarLiveActorEntity(CoordinatorEntity):
     def device_info(self) -> DeviceInfo:
         actor = self.actor or {}
         location_id = self.coordinator.data.get("location", {}).get("id")
-        return DeviceInfo(
-            identifiers={(DOMAIN, f"location_{location_id}_actor_{self._actor_id}")},
-            manufacturer="CATCH Power",
-            model=actor.get("class") or "Controllable Device",
-            name=actor.get("name") or f"Catch Solar Device {self._actor_id}",
-            via_device=(DOMAIN, f"location_{location_id}"),
+        device_info: dict[str, Any] = {
+            "identifiers": {(DOMAIN, f"location_{location_id}_actor_{self._actor_id}")},
+            "manufacturer": "CATCH Power",
+            "model": actor.get("class") or "Controllable Device",
+            "name": actor.get("name") or f"Catch Solar Device {self._actor_id}",
+        }
+        apply_parent_device_link(
+            device_info,
+            parent_device_id=getattr(self.coordinator, "location_device_id", None),
+            parent_identifier=(
+                location_device_identifier(location_id) if location_id is not None else None
+            ),
         )
+        return cast(DeviceInfo, device_info)
 
 
 class CatchSolarActorPowerSensor(CatchSolarLiveActorEntity, SensorEntity):
@@ -232,6 +243,12 @@ class CatchSolarActorPowerSensor(CatchSolarLiveActorEntity, SensorEntity):
     def native_value(self):
         return (self.actor or {}).get("power")
 
+    @property
+    def available(self) -> bool:
+        # A missing reading must read unavailable, not a stale or unknown
+        # value that looks like valid telemetry.
+        return super().available and self.native_value is not None
+
 
 class CatchSolarActorStateSensor(CatchSolarLiveActorEntity, SensorEntity):
     _attr_name = "Live State"
@@ -244,6 +261,10 @@ class CatchSolarActorStateSensor(CatchSolarLiveActorEntity, SensorEntity):
     @property
     def native_value(self):
         return (self.actor or {}).get("state")
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.native_value is not None
 
 
 class CatchSolarActorSocSensor(CatchSolarLiveActorEntity, SensorEntity):
@@ -260,6 +281,10 @@ class CatchSolarActorSocSensor(CatchSolarLiveActorEntity, SensorEntity):
     @property
     def native_value(self):
         return (self.actor or {}).get("soc")
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.native_value is not None
 
 
 class CatchSolarChannelPowerSensor(CatchSolarLocationEntity, SensorEntity):
@@ -288,7 +313,7 @@ class CatchSolarChannelPowerSensor(CatchSolarLocationEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        return super().available and self.channel is not None
+        return super().available and self.native_value is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, object]:

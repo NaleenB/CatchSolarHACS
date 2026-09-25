@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+from typing import Any
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
@@ -19,6 +22,7 @@ from .const import (
     PLATFORMS,
 )
 from .coordinator import CatchSolarDataUpdateCoordinator
+from .entity import location_device_identifier, location_device_name
 from .runtime import PrimaryLoadRuntimeTracker
 from .runtime_data import CatchSolarConfigEntry, CatchSolarRuntimeData
 from .telemetry import (
@@ -37,6 +41,36 @@ _REMOVED_ENTITY_UNIQUE_ID_TEMPLATES = (
 _RENAMED_ENTITY_UNIQUE_ID_TEMPLATES = (
     ("{location_id}_live_export_limit", "{location_id}_live_active_control"),
 )
+# Live channel power sensors created from a channel that carried only a type
+# (no name), e.g. "8382_channel_MAINS:_live_power". These duplicated the
+# site-level live power sensors and are no longer produced. The "[^:]*" is an
+# intentional regex class matching a channel type, so it is not escaped.
+_EMPTY_CHANNEL_NAME_UNIQUE_ID_SUFFIX = r"_channel_[^:]*:_live_power"
+
+
+def _async_register_location_device(
+    hass: HomeAssistant,
+    entry: CatchSolarConfigEntry,
+    location: dict[str, Any],
+) -> str | None:
+    """Create the location device up-front and return its registry id.
+
+    Registering the parent before the platforms are forwarded lets child
+    devices reference it by id (``DeviceInfo["via_device_id"]``) rather than
+    the deprecated ``via_device`` identifier tuple, and removes any dependency
+    on entity creation order.
+    """
+    location_id = location.get("id")
+    if location_id is None:
+        return None
+    device_entry = dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={location_device_identifier(location_id)},
+        manufacturer="CATCH Power",
+        model="Monocle Location",
+        name=location_device_name(location),
+    )
+    return device_entry.id
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: CatchSolarConfigEntry) -> bool:
@@ -57,6 +91,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: CatchSolarConfigEntry) -
         config_entry=entry,
     )
     await coordinator.async_config_entry_first_refresh()
+    coordinator.location_device_id = _async_register_location_device(
+        hass,
+        entry,
+        coordinator.data.get("location") or {},
+    )
 
     merged_config = {**entry.data, **entry.options}
     daily_energy_coordinator = None
@@ -68,6 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: CatchSolarConfigEntry) -
     live_client = None
     if merged_config.get(CONF_ENABLE_LIVE_DATA, DEFAULT_ENABLE_LIVE_DATA):
         live_coordinator = CatchSolarLiveCoordinator(hass, merged_config)
+        live_coordinator.location_device_id = coordinator.location_device_id
         live_client = CatchSolarLiveClient(
             hass,
             api,
@@ -153,38 +193,58 @@ async def async_remove_config_entry_device(
     return not any(identifier in known_identifiers for identifier in device_entry.identifiers)
 
 
+def _remove_empty_channel_name_entities(hass: HomeAssistant, location_id: object) -> int:
+    """Delete live channel power sensors keyed off a channel that had no name."""
+    registry = er.async_get(hass)
+    pattern = re.compile(
+        "^" + re.escape(str(location_id)) + _EMPTY_CHANNEL_NAME_UNIQUE_ID_SUFFIX + "$"
+    )
+    removed = 0
+    for entity_entry in list(registry.entities.values()):
+        if entity_entry.platform != DOMAIN or entity_entry.domain != "sensor":
+            continue
+        if pattern.match(entity_entry.unique_id or ""):
+            registry.async_remove(entity_entry.entity_id)
+            removed += 1
+    return removed
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Remove retired entities and migrate the active-control sensor name."""
-    if entry.version >= 3:
+    if entry.version >= 4:
         return True
 
     options = dict(entry.options)
-    options.pop("enable_power_data", None)
-
     location_id = entry.data.get(CONF_LOCATION_ID)
-    if location_id is not None:
-        registry = er.async_get(hass)
-        for unique_id_template in _REMOVED_ENTITY_UNIQUE_ID_TEMPLATES:
-            entity_id = registry.async_get_entity_id(
-                "sensor",
-                DOMAIN,
-                unique_id_template.format(location_id=location_id),
-            )
-            if entity_id is not None:
-                registry.async_remove(entity_id)
-        for old_template, new_template in _RENAMED_ENTITY_UNIQUE_ID_TEMPLATES:
-            entity_id = registry.async_get_entity_id(
-                "sensor",
-                DOMAIN,
-                old_template.format(location_id=location_id),
-            )
-            if entity_id is not None:
-                registry.async_update_entity(
-                    entity_id,
-                    new_unique_id=new_template.format(location_id=location_id),
-                )
 
-    hass.config_entries.async_update_entry(entry, options=options, version=3)
+    if entry.version < 3:
+        options.pop("enable_power_data", None)
+        if location_id is not None:
+            registry = er.async_get(hass)
+            for unique_id_template in _REMOVED_ENTITY_UNIQUE_ID_TEMPLATES:
+                entity_id = registry.async_get_entity_id(
+                    "sensor",
+                    DOMAIN,
+                    unique_id_template.format(location_id=location_id),
+                )
+                if entity_id is not None:
+                    registry.async_remove(entity_id)
+            for old_template, new_template in _RENAMED_ENTITY_UNIQUE_ID_TEMPLATES:
+                entity_id = registry.async_get_entity_id(
+                    "sensor",
+                    DOMAIN,
+                    old_template.format(location_id=location_id),
+                )
+                if entity_id is not None:
+                    registry.async_update_entity(
+                        entity_id,
+                        new_unique_id=new_template.format(location_id=location_id),
+                    )
+
+    if entry.version < 4 and location_id is not None:
+        _remove_empty_channel_name_entities(hass, location_id)
+
+    hass.config_entries.async_update_entry(entry, options=options, version=4)
     return True
 
 

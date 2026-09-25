@@ -1,11 +1,40 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_PRIMARY_LOAD_LABEL, DEFAULT_PRIMARY_LOAD_LABEL, DOMAIN
+
+# Home Assistant replaced DeviceInfo["via_device"] (an identifier tuple) with
+# DeviceInfo["via_device_id"] (the parent's device-registry id) and has since
+# dropped "via_device" from the TypedDict entirely. Feature-detect the key this
+# build understands so the integration works on both sides of the change.
+_DEVICE_INFO_KEYS = getattr(DeviceInfo, "__annotations__", {})
+
+
+def location_device_identifier(location_id: object) -> tuple[str, str]:
+    """Return the registry identifier of a location device."""
+    return (DOMAIN, f"location_{location_id}")
+
+
+def apply_parent_device_link(
+    device_info: dict[str, Any],
+    *,
+    parent_device_id: str | None,
+    parent_identifier: tuple[str, str] | None,
+) -> None:
+    """Link a child device to its parent using the key this HA build supports.
+
+    On builds that understand ``via_device_id`` the parent's registry id is
+    used; older builds fall back to the ``via_device`` identifier tuple.
+    """
+    if "via_device_id" in _DEVICE_INFO_KEYS:
+        if parent_device_id is not None:
+            device_info["via_device_id"] = parent_device_id
+    elif parent_identifier is not None:
+        device_info["via_device"] = parent_identifier
 
 
 def _clean_name(value: object) -> str | None:
@@ -15,12 +44,16 @@ def _clean_name(value: object) -> str | None:
     return cleaned or None
 
 
-def _location_device_name(location: dict[str, Any]) -> str:
+def location_device_name(location: dict[str, Any]) -> str:
     location_id = location.get("id", "unknown")
     location_name = _clean_name(location.get("name"))
     if location_name and location_name != str(location_id):
         return f"{location_name} (Catch Solar Location {location_id})"
     return f"Catch Solar Location {location_id}"
+
+
+# Retained for callers that still reference the original private name.
+_location_device_name = location_device_name
 
 
 def _relay_device_name(
@@ -77,20 +110,25 @@ class CatchSolarCoordinatorEntity(CoordinatorEntity):
         if device is None:
             return None
         via_location_id = self.location_entry.get("id")
-        device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"device_{device.get('id')}")},
-            manufacturer="CATCH Power",
-            model=device.get("device_type") or "Solar Relay",
-            name=_relay_device_name(
+        device_info: dict[str, Any] = {
+            "identifiers": {(DOMAIN, f"device_{device.get('id')}")},
+            "manufacturer": "CATCH Power",
+            "model": device.get("device_type") or "Solar Relay",
+            "name": _relay_device_name(
                 device=device,
                 primary_device_id=self.coordinator.data.get("primary_device_id"),
                 primary_load_label=self.primary_load_label,
             ),
-            serial_number=device.get("serial_number"),
+            "serial_number": device.get("serial_number"),
+        }
+        apply_parent_device_link(
+            device_info,
+            parent_device_id=getattr(self.coordinator, "location_device_id", None),
+            parent_identifier=(
+                location_device_identifier(via_location_id) if via_location_id is not None else None
+            ),
         )
-        if via_location_id is not None:
-            device_info["via_device"] = (DOMAIN, f"location_{via_location_id}")
-        return device_info
+        return cast(DeviceInfo, device_info)
 
 
 class CatchSolarLocationEntity(CoordinatorEntity):

@@ -44,6 +44,10 @@ class CatchSolarDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.api = api
         self.config = config
         self.runtime_tracker = runtime_tracker
+        # Resolved device-registry id of this entry's location device, so child
+        # entities can set DeviceInfo["via_device_id"] without a registry
+        # lookup per property read. Populated during async_setup_entry.
+        self.location_device_id: str | None = None
 
     async def _async_update_data(self) -> dict[str, Any]:
         try:

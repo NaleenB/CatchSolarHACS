@@ -4,6 +4,19 @@ Implementation and installation details are in the [README](README.md).
 
 ## Unreleased
 
+- Link child devices to the location device with `via_device_id` instead of the
+  deprecated `via_device` identifier tuple. Home Assistant removed `via_device`
+  from `DeviceInfo`, so the integration now feature-detects which key the
+  running build supports and registers the location device up-front.
+- Drop live channels that carry no name. Keying a channel off its type alone
+  produced identifiers like `MAINS:`, whose generated entity name collided with
+  the site-level `Live Mains Power` sensor and left a permanent duplicate in the
+  registry. Migration to config-entry version 4 deletes the entities that were
+  already created this way.
+- Report live actor power/state/SoC and channel power sensors as unavailable
+  when the upstream value is missing, instead of publishing `unknown` from an
+  entity that still claims to be available.
+
 ## 0.2.1 — 2026-08-19
 
 - Keep missing or malformed device state unknown instead of treating it as off;

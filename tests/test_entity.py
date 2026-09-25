@@ -6,10 +6,12 @@ from zoneinfo import ZoneInfo
 import pytest
 from homeassistant.util import dt as dt_util
 
+from custom_components.catchsolar import entity as entity_module
 from custom_components.catchsolar.binary_sensor import (
     CatchSolarLoadStateBinarySensor,
     CatchSolarPrimaryLoadStateBinarySensor,
 )
+from custom_components.catchsolar.const import DOMAIN
 from custom_components.catchsolar.entity import CatchSolarCoordinatorEntity
 from custom_components.catchsolar.sensor import (
     CatchSolarPrimaryLoadRuntimeSensor,
@@ -218,3 +220,108 @@ def test_live_entities_read_site_actor_and_channel_data() -> None:
     assert actor_power.device_info["name"] == "Battery"
     assert channel.native_value == 3600
     assert channel.extra_state_attributes["channel_type"] == "LOAD"
+
+
+def _build_live_coordinator(**overrides) -> SimpleNamespace:
+    data: dict = {
+        "location": {"id": 99999, "name": "Home"},
+        "site_power": {"mains_power": -250},
+        "limits": {},
+        "actors": [
+            {
+                "id": "actor-1",
+                "class": "BATT",
+                "name": "Battery",
+                "power": -1200,
+                "state": "CHARGING",
+                "soc": 73,
+            }
+        ],
+        "channels": [
+            {
+                "key": "LOAD:Hot Water",
+                "name": "Hot Water",
+                "type": "LOAD",
+                "power": 3600,
+            }
+        ],
+    }
+    data.update(overrides)
+    return SimpleNamespace(data=data, config={}, last_update_success=True)
+
+
+def test_child_device_links_to_location_device_by_registry_id(monkeypatch) -> None:
+    """DeviceInfo must use the parent's registry id when HA supports it."""
+    monkeypatch.setattr(entity_module, "_DEVICE_INFO_KEYS", {"via_device_id": str})
+    coordinator = _build_coordinator()
+    coordinator.location_device_id = "parent-device-id"
+
+    device_info = CatchSolarCoordinatorEntity(coordinator, 88888).device_info
+
+    assert device_info["via_device_id"] == "parent-device-id"
+    assert "via_device" not in device_info
+
+
+def test_child_device_falls_back_to_via_device_identifier(monkeypatch) -> None:
+    """Older Home Assistant builds only understand the identifier tuple."""
+    monkeypatch.setattr(entity_module, "_DEVICE_INFO_KEYS", {"via_device": tuple})
+    coordinator = _build_coordinator()
+    coordinator.location_device_id = "parent-device-id"
+
+    device_info = CatchSolarCoordinatorEntity(coordinator, 88888).device_info
+
+    assert device_info["via_device"] == (DOMAIN, "location_99999")
+    assert "via_device_id" not in device_info
+
+
+def test_child_device_omits_parent_link_without_a_parent(monkeypatch) -> None:
+    monkeypatch.setattr(entity_module, "_DEVICE_INFO_KEYS", {"via_device_id": str})
+    coordinator = _build_coordinator()
+    coordinator.data["location"] = {}
+
+    device_info = CatchSolarCoordinatorEntity(coordinator, 88888).device_info
+
+    assert "via_device_id" not in device_info
+    assert "via_device" not in device_info
+
+
+def test_live_actor_device_links_to_location_device(monkeypatch) -> None:
+    monkeypatch.setattr(entity_module, "_DEVICE_INFO_KEYS", {"via_device_id": str})
+    coordinator = _build_live_coordinator()
+    coordinator.location_device_id = "parent-device-id"
+
+    device_info = CatchSolarActorPowerSensor(coordinator, "actor-1").device_info
+
+    assert device_info["via_device_id"] == "parent-device-id"
+    assert "via_device" not in device_info
+
+
+def test_actor_and_channel_sensors_are_unavailable_without_a_reading() -> None:
+    """A missing reading must read unavailable, never a plausible-looking value."""
+    coordinator = _build_live_coordinator(
+        actors=[
+            {
+                "id": "actor-1",
+                "class": "BATT",
+                "name": "Battery",
+                "power": None,
+                "state": None,
+                "soc": None,
+            }
+        ],
+        channels=[{"key": "LOAD:Hot Water", "name": "Hot Water", "type": "LOAD", "power": None}],
+    )
+
+    assert CatchSolarActorPowerSensor(coordinator, "actor-1").available is False
+    assert CatchSolarActorStateSensor(coordinator, "actor-1").available is False
+    assert CatchSolarActorSocSensor(coordinator, "actor-1").available is False
+    assert CatchSolarChannelPowerSensor(coordinator, "LOAD:Hot Water").available is False
+
+
+def test_actor_and_channel_sensors_stay_available_with_a_reading() -> None:
+    coordinator = _build_live_coordinator()
+
+    assert CatchSolarActorPowerSensor(coordinator, "actor-1").available is True
+    assert CatchSolarActorStateSensor(coordinator, "actor-1").available is True
+    assert CatchSolarActorSocSensor(coordinator, "actor-1").available is True
+    assert CatchSolarChannelPowerSensor(coordinator, "LOAD:Hot Water").available is True
