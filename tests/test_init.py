@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from custom_components.catchsolar import (
+    _async_register_location_device,
     async_remove_config_entry_device,
     async_remove_entry,
     async_setup_entry,
@@ -63,9 +64,12 @@ async def test_setup_failure_shuts_down_daily_energy_coordinator(hass) -> None:
     )
     runtime_tracker = AsyncMock()
     core_coordinator = AsyncMock()
+    core_coordinator.data = {"location": {"id": 8382, "name": "Home"}}
     daily_energy_coordinator = AsyncMock()
     live_coordinator = Mock()
     live_client = AsyncMock()
+    device_registry = Mock()
+    device_registry.async_get_or_create.return_value = SimpleNamespace(id="location-device-id")
     hass.config_entries.async_forward_entry_setups = AsyncMock(
         side_effect=RuntimeError("platform setup failed")
     )
@@ -93,6 +97,7 @@ async def test_setup_failure_shuts_down_daily_energy_coordinator(hass) -> None:
             "custom_components.catchsolar.CatchSolarLiveClient",
             return_value=live_client,
         ),
+        patch("custom_components.catchsolar.dr.async_get", return_value=device_registry),
     ):
         with pytest.raises(RuntimeError, match="platform setup failed"):
             await async_setup_entry(hass, entry)
@@ -101,6 +106,43 @@ async def test_setup_failure_shuts_down_daily_energy_coordinator(hass) -> None:
     live_client.async_stop.assert_awaited_once()
     daily_energy_coordinator.async_shutdown.assert_awaited_once()
     assert entry.runtime_data is not None
+    # The parent device is registered up-front and its registry id is shared
+    # with the live coordinator so actor devices can link to it.
+    device_registry.async_get_or_create.assert_called_once()
+    assert core_coordinator.location_device_id == "location-device-id"
+    assert live_coordinator.location_device_id == "location-device-id"
+
+
+@pytest.mark.asyncio
+async def test_register_location_device_returns_registry_id() -> None:
+    device_registry = Mock()
+    device_registry.async_get_or_create.return_value = SimpleNamespace(id="dev-1")
+    hass = SimpleNamespace()
+
+    with patch("custom_components.catchsolar.dr.async_get", return_value=device_registry):
+        result = _async_register_location_device(
+            hass, SimpleNamespace(entry_id="entry-1"), {"id": 8382, "name": "Home"}
+        )
+
+    assert result == "dev-1"
+    assert device_registry.async_get_or_create.call_args.kwargs["identifiers"] == {
+        (DOMAIN, "location_8382")
+    }
+    assert (
+        device_registry.async_get_or_create.call_args.kwargs["name"]
+        == "Home (Catch Solar Location 8382)"
+    )
+
+
+@pytest.mark.asyncio
+async def test_register_location_device_skips_missing_location_id() -> None:
+    hass = SimpleNamespace()
+
+    with patch("custom_components.catchsolar.dr.async_get") as registry_get:
+        result = _async_register_location_device(hass, SimpleNamespace(entry_id="entry-1"), {})
+
+    assert result is None
+    registry_get.assert_not_called()
 
 
 @pytest.mark.asyncio

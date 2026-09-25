@@ -6,7 +6,7 @@ runtime platform small and makes the two data paths easy to reason about.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -16,7 +16,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LIVE_PUBLISH_INTERVAL_SECONDS
-from .entity import CatchSolarLocationEntity
+from .entity import (
+    CatchSolarLocationEntity,
+    apply_parent_device_link,
+    location_device_identifier,
+)
 from .runtime_data import CatchSolarRuntimeData
 
 LIVE_SITE_POWER_SENSOR_KEYS = {
@@ -93,8 +97,14 @@ def setup_telemetry_sensors(
 
         for actor in actors:
             actor_id = actor["id"]
+            # Actor power is deliberately not discovered. The upstream `pwr`
+            # field is not a usable measurement for the relay actors this
+            # integration supports: it reports 0 for a solar relay even while
+            # the load it controls is demonstrably running, so the entity read
+            # a permanent, plausible-looking 0 W. Only state and SoC are
+            # exposed. Config-entry version 4 removes the entities that were
+            # already created this way.
             candidates = (
-                ("power", actor.get("power"), CatchSolarActorPowerSensor),
                 ("state", actor.get("state"), CatchSolarActorStateSensor),
                 ("soc", actor.get("soc"), CatchSolarActorSocSensor),
             )
@@ -208,29 +218,20 @@ class CatchSolarLiveActorEntity(CoordinatorEntity):
     def device_info(self) -> DeviceInfo:
         actor = self.actor or {}
         location_id = self.coordinator.data.get("location", {}).get("id")
-        return DeviceInfo(
-            identifiers={(DOMAIN, f"location_{location_id}_actor_{self._actor_id}")},
-            manufacturer="CATCH Power",
-            model=actor.get("class") or "Controllable Device",
-            name=actor.get("name") or f"Catch Solar Device {self._actor_id}",
-            via_device=(DOMAIN, f"location_{location_id}"),
+        device_info: dict[str, Any] = {
+            "identifiers": {(DOMAIN, f"location_{location_id}_actor_{self._actor_id}")},
+            "manufacturer": "CATCH Power",
+            "model": actor.get("class") or "Controllable Device",
+            "name": actor.get("name") or f"Catch Solar Device {self._actor_id}",
+        }
+        apply_parent_device_link(
+            device_info,
+            parent_device_id=getattr(self.coordinator, "location_device_id", None),
+            parent_identifier=(
+                location_device_identifier(location_id) if location_id is not None else None
+            ),
         )
-
-
-class CatchSolarActorPowerSensor(CatchSolarLiveActorEntity, SensorEntity):
-    _attr_device_class = SensorDeviceClass.POWER
-    _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_native_unit_of_measurement = UnitOfPower.WATT
-    _attr_name = "Live Power"
-
-    def __init__(self, coordinator, actor_id: str) -> None:
-        super().__init__(coordinator, actor_id)
-        location_id = self.coordinator.data.get("location", {}).get("id", "unknown")
-        self._attr_unique_id = f"{location_id}_actor_{actor_id}_live_power"
-
-    @property
-    def native_value(self):
-        return (self.actor or {}).get("power")
+        return cast(DeviceInfo, device_info)
 
 
 class CatchSolarActorStateSensor(CatchSolarLiveActorEntity, SensorEntity):
@@ -244,6 +245,10 @@ class CatchSolarActorStateSensor(CatchSolarLiveActorEntity, SensorEntity):
     @property
     def native_value(self):
         return (self.actor or {}).get("state")
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.native_value is not None
 
 
 class CatchSolarActorSocSensor(CatchSolarLiveActorEntity, SensorEntity):
@@ -260,6 +265,10 @@ class CatchSolarActorSocSensor(CatchSolarLiveActorEntity, SensorEntity):
     @property
     def native_value(self):
         return (self.actor or {}).get("soc")
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.native_value is not None
 
 
 class CatchSolarChannelPowerSensor(CatchSolarLocationEntity, SensorEntity):
@@ -288,7 +297,7 @@ class CatchSolarChannelPowerSensor(CatchSolarLocationEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        return super().available and self.channel is not None
+        return super().available and self.native_value is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, object]:

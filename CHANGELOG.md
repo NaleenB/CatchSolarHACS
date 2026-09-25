@@ -2,7 +2,28 @@
 
 Implementation and installation details are in the [README](README.md).
 
-## Unreleased
+## 0.3.0 — 2026-09-25
+
+- Link child devices to the location device with `via_device_id` instead of the
+  deprecated `via_device` identifier tuple. Home Assistant removed `via_device`
+  from `DeviceInfo`, so the integration now feature-detects which key the
+  running build supports and registers the location device up-front.
+- Drop live channels that carry no name. Keying a channel off its type alone
+  produced identifiers like `MAINS:`, whose generated entity name collided with
+  the site-level `Live Mains Power` sensor and left a permanent duplicate in the
+  registry.
+- Remove actor **Live Power** sensors. The upstream `pwr` field is not a usable
+  measurement for the relay actors this integration supports — it reports 0 for
+  a solar relay even while the load it controls is running — so the entity read
+  a permanent, plausible-looking 0 W. Actor `Live State` and `Live State of
+  Charge` are unaffected.
+- Report live actor state/SoC and channel power sensors as unavailable when the
+  upstream value is missing, instead of publishing `unknown` from an entity that
+  still claims to be available.
+- Migration to config-entry version 4 deletes the retired live sensors described
+  above. `CatchSolarConfigFlow.VERSION` moves to 4 in step, since Home Assistant
+  only runs the migration when the stored entry version differs from the flow's
+  declared version.
 
 ## 0.2.1 — 2026-08-19
 

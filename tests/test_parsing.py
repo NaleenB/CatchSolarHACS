@@ -129,3 +129,43 @@ def test_extract_live_event_discovers_site_actor_and_channel_values() -> None:
             "power": 3600.0,
         }
     ]
+
+
+def test_extract_live_event_drops_channels_without_a_name() -> None:
+    """A nameless channel cannot be identified.
+
+    Keying off the type alone produced keys like "MAINS:", whose generated
+    entity name collided with the site-level "Live Mains Power" sensor and left
+    a permanent duplicate in the registry.
+    """
+    result = extract_live_event(
+        {
+            "channels": [
+                {"channelName": "", "channelPWR": 12.0, "channelType": "MAINS"},
+                {"channelName": "   ", "channelPWR": 13.0, "channelType": "SOLAR"},
+                {"channelName": "undefined", "channelPWR": 14.0, "channelType": "LOAD"},
+                {"channelName": "Hot Water", "channelPWR": 3600.0, "channelType": "LOAD"},
+            ]
+        }
+    )
+
+    assert result["channels"] == [
+        {
+            "key": "LOAD:Hot Water",
+            "name": "Hot Water",
+            "type": "LOAD",
+            "power": 3600.0,
+        }
+    ]
+
+
+def test_extract_live_event_drops_channels_with_an_undefined_type() -> None:
+    result = extract_live_event(
+        {
+            "channels": [
+                {"channelName": "Hot Water", "channelPWR": 3600.0, "channelType": "undefined"},
+            ]
+        }
+    )
+
+    assert result["channels"] == []

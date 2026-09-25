@@ -94,6 +94,10 @@ class CatchSolarLiveCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     ) -> None:
         super().__init__(hass, _LOGGER, name="Catch Solar live telemetry")
         self.config = config
+        # Mirrors CatchSolarDataUpdateCoordinator.location_device_id so live
+        # actor entities can link to the location device without a registry
+        # lookup per property read.
+        self.location_device_id: str | None = None
         self._location = {
             "id": int(config["location_id"]),
             "name": config.get("location_name"),

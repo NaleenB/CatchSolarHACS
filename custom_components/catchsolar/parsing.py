@@ -168,9 +168,13 @@ def extract_live_event(payload: dict[str, Any]) -> dict[str, Any]:
                 continue
             name = str(item.get("channelName") or "").strip()
             channel_type = str(item.get("channelType") or "").strip()
-            if name.casefold() == "undefined" or channel_type.casefold() == "undefined":
+            # A channel needs a real name to be identifiable. Keying off the
+            # type alone produced keys like "MAINS:" whose generated entity
+            # name ("Live MAINS Power") collided with the site-level
+            # "Live Mains Power" sensor, leaving a permanent duplicate.
+            if not name or name.casefold() == "undefined":
                 continue
-            if not name and not channel_type:
+            if channel_type.casefold() == "undefined":
                 continue
             key = f"{channel_type}:{name}"
             channels_by_key[key] = {
