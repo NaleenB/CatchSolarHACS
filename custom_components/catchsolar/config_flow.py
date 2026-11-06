@@ -16,6 +16,7 @@ from .const import (
     CONF_ENABLE_LIVE_DATA,
     CONF_LOCATION_ID,
     CONF_LOCATION_NAME,
+    CONF_OVERRIDE_DURATION,
     CONF_PASSWORD,
     CONF_PRIMARY_DEVICE_ID,
     CONF_PRIMARY_LOAD_LABEL,
@@ -23,9 +24,12 @@ from .const import (
     CONF_USERNAME,
     DEFAULT_ENABLE_DAILY_ENERGY,
     DEFAULT_ENABLE_LIVE_DATA,
+    DEFAULT_OVERRIDE_DURATION_MINUTES,
     DEFAULT_PRIMARY_LOAD_LABEL,
     DEFAULT_SCAN_INTERVAL_SECONDS,
     DOMAIN,
+    MAX_OVERRIDE_DURATION_MINUTES,
+    MIN_OVERRIDE_DURATION_MINUTES,
 )
 
 
@@ -132,6 +136,7 @@ class CatchSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_ENABLE_LIVE_DATA: DEFAULT_ENABLE_LIVE_DATA,
                 CONF_ENABLE_DAILY_ENERGY: DEFAULT_ENABLE_DAILY_ENERGY,
                 CONF_PRIMARY_LOAD_LABEL: DEFAULT_PRIMARY_LOAD_LABEL,
+                CONF_OVERRIDE_DURATION: DEFAULT_OVERRIDE_DURATION_MINUTES,
             },
         )
 
@@ -381,6 +386,20 @@ class CatchSolarOptionsFlow(OptionsFlowWithReload):
                             CONF_PRIMARY_LOAD_LABEL, DEFAULT_PRIMARY_LOAD_LABEL
                         ),
                     ): selector.TextSelector(),
+                    vol.Required(
+                        CONF_OVERRIDE_DURATION,
+                        default=entry.options.get(
+                            CONF_OVERRIDE_DURATION,
+                            DEFAULT_OVERRIDE_DURATION_MINUTES,
+                        ),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=MIN_OVERRIDE_DURATION_MINUTES,
+                            max=MAX_OVERRIDE_DURATION_MINUTES,
+                            step=5,
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
                     vol.Optional(
                         CONF_PRIMARY_DEVICE_ID,
                         default=str(current_primary) if current_primary is not None else "",

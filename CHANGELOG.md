@@ -2,6 +2,12 @@
 
 Implementation and installation details are in the [README](README.md).
 
+## Unreleased
+
+- Add a **Primary Load Control** select (`Auto` / `On` / `Off`) backed by
+  Catch's manual override endpoints, with a configurable 1-480 minute override
+  duration and automatic return to the relay schedule.
+
 ## 0.3.0 — 2026-09-25
 
 - Link child devices to the location device with `via_device_id` instead of the
@@ -24,6 +30,12 @@ Implementation and installation details are in the [README](README.md).
   above. `CatchSolarConfigFlow.VERSION` moves to 4 in step, since Home Assistant
   only runs the migration when the stored entry version differs from the flow's
   declared version.
+
+## Unreleased
+
+- Add a **Primary Load Control** select (`Auto` / `On` / `Off`) backed by
+  Catch's manual override endpoints, with a configurable 1-480 minute override
+  duration and automatic return to the relay schedule.
 
 ## 0.2.1 — 2026-08-19
 

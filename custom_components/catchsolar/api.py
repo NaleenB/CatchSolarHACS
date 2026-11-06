@@ -7,7 +7,7 @@ from typing import Any
 from aiohttp import ClientError, ClientResponseError, ClientSession, ClientTimeout
 
 from .const import API_BASE
-from .parsing import parse_locations
+from .parsing import extract_override_state, parse_locations
 
 
 class CatchSolarApiError(Exception):
@@ -148,3 +148,71 @@ class CatchSolarApiClient:
         if not isinstance(payload, dict):
             raise CatchSolarApiError("Invalid datakwh payload")
         return payload
+
+    async def async_get_actors(self, location_id: int) -> list[str]:
+        payload = await self._request_json(
+            "POST",
+            "/fleet/get-location-actors",
+            json_payload={"locationId": location_id},
+            authenticated=True,
+        )
+        result = payload.get("result") if isinstance(payload, dict) else payload
+        if not isinstance(result, list):
+            raise CatchSolarApiError("Invalid actors payload")
+        return [item for item in result if isinstance(item, str)]
+
+    async def async_get_override_state(
+        self, location_id: int, actor_id: str
+    ) -> dict[str, Any]:
+        payload = await self._request_json(
+            "POST",
+            "/data/getScreenDef",
+            json_payload={"actorID": actor_id, "locationId": location_id},
+            authenticated=True,
+        )
+        if not isinstance(payload, dict) or payload.get("success") is not True:
+            raise CatchSolarApiError("Invalid override screen payload")
+        return extract_override_state(payload)
+
+    async def async_save_override(
+        self,
+        location_id: int,
+        actor_id: str,
+        mode: str,
+        valid_until_minutes: int,
+    ) -> None:
+        payload = await self._request_json(
+            "POST",
+            "/data/saveOverride",
+            json_payload={
+                "actorID": actor_id,
+                "locationId": location_id,
+                "override": {
+                    "validUntil": valid_until_minutes,
+                    "mode": mode,
+                },
+            },
+            authenticated=True,
+        )
+        if not isinstance(payload, dict) or payload.get("success") is not True:
+            raise CatchSolarApiError(_override_error(payload, "Override was rejected"))
+
+    async def async_remove_override(self, location_id: int, actor_id: str) -> None:
+        payload = await self._request_json(
+            "POST",
+            "/data/removeOverride",
+            json_payload={"actorID": actor_id, "locationId": location_id},
+            authenticated=True,
+        )
+        if not isinstance(payload, dict) or payload.get("success") is not True:
+            raise CatchSolarApiError(_override_error(payload, "Override removal was rejected"))
+
+
+def _override_error(payload: object, fallback: str) -> str:
+    if isinstance(payload, dict):
+        result = payload.get("result")
+        if isinstance(result, dict):
+            message = result.get("message")
+            if isinstance(message, str) and message:
+                return f"{fallback}: {message}"
+    return fallback

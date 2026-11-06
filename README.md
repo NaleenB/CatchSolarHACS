@@ -11,6 +11,7 @@ Catch Solar is an Australian solar energy monitoring system. The Monocle is the 
 This integration connects to the Monocle API through Home Assistant's guided setup (config flow) and gives you:
 
 - **Primary load state** — a binary sensor that shows whether your controlled load (e.g. water heater) is currently on or off, suitable for automations and dashboards
+- **Manual load control** — a select entity that forces the primary load on or off for a set duration through the same override API the Monocle app uses, then returns it to the relay's own schedule
 - **Runtime tracking** — three sensors that track how long your primary load has been running: today, the last 7 days, and all time since the integration was installed
 - **Device monitoring** — online/offline status and metadata for each Monocle relay device
 - **Live power telemetry** — optional near-real-time mains, solar, house,
@@ -49,6 +50,7 @@ controllable-device sub-devices when the live feed reports them:
 On the location device you will find:
 
 - **Primary Load State** — binary sensor, on when your primary load is active
+- **Primary Load Control** — select with `Auto`, `On`, and `Off` modes
 - **Primary Load Runtime Today** — hours the load ran today (since midnight, local time)
 - **Primary Load Runtime 7d Rolling** — hours the load ran in the last 7 days
 - **Primary Load Runtime Total** — hours the load has run since the integration was installed
@@ -119,6 +121,7 @@ After setup, click **Configure** on the Catch Solar integration tile to adjust:
 | **Enable live data** | Off | Whether to subscribe to the read-only Socket.IO event stream |
 | **Enable daily energy** | Off | Whether to poll local-day energy totals every 300 seconds |
 | **Primary load label** | `Primary Load` | A semantic name for your controlled load (e.g. `Water Heater`, `Pool Pump`). This label is used in entity and device names so you can identify them easily |
+| **Manual override duration** | 120 minutes | How long an `On` or `Off` selection stays in force before the relay returns to its own schedule (1–480 minutes) |
 
 ### Experimental feature rollback
 
@@ -131,6 +134,30 @@ The feature IDs, current enabled/loaded state, and latest update result appear
 in downloaded integration diagnostics. The complete code inventory and
 permanent-removal checklist are in
 [`EXPERIMENTAL_FEATURES.md`](EXPERIMENTAL_FEATURES.md).
+
+## Load control
+
+The primary load has one write path: the **Primary Load Control** select
+(`select.catch_solar_<location>_<label>_control`).
+
+| Selection | Effect |
+|---|---|
+| `Auto` | Removes any manual override, so the relay's configured schedule and solar logic decide the load state |
+| `On` | Forces the load on for the configured override duration |
+| `Off` | Forces the load off for the configured override duration |
+
+Overrides are sent to Catch's `saveOverride` endpoint with the same actor and
+mode fields the Monocle app uses. On startup the select reads Catch's current
+override screen, so an override set in the Monocle app (or before a Home
+Assistant restart) is reflected instead of being assumed to be `Auto`. When the
+duration expires, Catch returns the relay to its schedule and the select reports
+`Auto` again. Changing the select
+is the only time the integration writes to Catch; polling, runtime tracking,
+live telemetry, and daily energy remain read-only.
+
+Treat this as a manual override, not a general-purpose switch. Forcing `Off`
+does not change the relay's schedule, and a forced `On` can consume grid energy
+outside the solar window.
 
 ## Energy Dashboard setup
 
@@ -168,8 +195,9 @@ Home Assistant handle that daily reset when building long-term statistics.
 - Diagnostics are shareable: sensitive values such as usernames, passwords, and tokens are automatically redacted.
 - Live and daily-energy failures are isolated: neither can make primary-load
   state or runtime entities unavailable.
-- This integration is read-only. It does not register Catch Power override or
-  device-control services.
+- The only write path is the **Primary Load Control** select. It uses Catch's
+  manual override endpoint and expires automatically; there are no other
+  Catch Power override or device-control services.
 
 ## Troubleshooting
 

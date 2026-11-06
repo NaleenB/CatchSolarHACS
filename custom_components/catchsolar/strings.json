@@ -70,12 +70,14 @@
           "enable_live_data": "Enable live Socket.IO telemetry",
           "enable_daily_energy": "Enable daily Energy Dashboard meters",
           "primary_load_label": "Primary load label",
-          "primary_device_id": "Primary relay"
+          "primary_device_id": "Primary relay",
+          "override_duration": "Manual override duration (minutes)"
         },
         "data_description": {
           "scan_interval": "Lower values increase requests to the Catch Solar API.",
           "enable_live_data": "Live telemetry uses an unofficial read-only Socket.IO endpoint.",
-          "enable_daily_energy": "Daily energy meters poll the API every five minutes."
+          "enable_daily_energy": "Daily energy meters poll the API every five minutes.",
+          "override_duration": "Applied when the primary load control is set to On or Off; 1-480 minutes."
         }
       }
     }

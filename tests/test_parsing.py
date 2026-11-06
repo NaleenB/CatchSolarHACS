@@ -169,3 +169,54 @@ def test_extract_live_event_drops_channels_with_an_undefined_type() -> None:
     )
 
     assert result["channels"] == []
+def test_resolve_relay_actor_id_prefers_grid_actor() -> None:
+    from custom_components.catchsolar.parsing import resolve_relay_actor_id
+
+    actors = ["SR.3649", "GLD.SR.3649", "SITE.8382"]
+    assert resolve_relay_actor_id(actors, "3649") == "GLD.SR.3649"
+
+
+def test_resolve_relay_actor_id_returns_none_without_serial_match() -> None:
+    from custom_components.catchsolar.parsing import resolve_relay_actor_id
+
+    assert resolve_relay_actor_id(["GLD.SR.1111"], "3649") is None
+    assert resolve_relay_actor_id(["GLD.SR.3649"], None) is None
+
+
+def test_extract_override_state_maps_screen_fields() -> None:
+    from datetime import UTC, datetime
+
+    from custom_components.catchsolar.parsing import extract_override_state
+
+    result = extract_override_state(
+        {
+            "success": True,
+            "result": {
+                "fields": [
+                    {"id": "validUntil", "currentValue": 1793944841483},
+                    {"id": "mode", "currentValue": "on"},
+                ]
+            },
+        }
+    )
+
+    assert result["mode"] == "on"
+    assert result["expires_at"] == datetime.fromtimestamp(
+        1793944841.483, tz=UTC
+    )
+
+
+def test_extract_override_state_treats_default_as_auto() -> None:
+    from custom_components.catchsolar.parsing import extract_override_state
+
+    result = extract_override_state(
+        {"success": True, "result": {"fields": [{"id": "mode", "currentValue": "default"}]}}
+    )
+
+    assert result == {"mode": "auto", "expires_at": None}
+
+
+def test_extract_override_state_ignores_missing_fields() -> None:
+    from custom_components.catchsolar.parsing import extract_override_state
+
+    assert extract_override_state({}) == {"mode": None, "expires_at": None}

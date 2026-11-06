@@ -6,7 +6,11 @@ from homeassistant.const import Platform
 DOMAIN = "catchsolar"
 API_BASE = "https://monocle0.edde.world"
 
-PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.SELECT,
+    Platform.SENSOR,
+]
 
 CONF_USERNAME = "username"
 CONF_PASSWORD = "password"
@@ -18,11 +22,15 @@ CONF_ENABLE_LIVE_DATA = "enable_live_data"
 CONF_ENABLE_DAILY_ENERGY = "enable_daily_energy"
 CONF_PRIMARY_LOAD_LABEL = "primary_load_label"
 CONF_PRIMARY_DEVICE_ID = "primary_device_id"
+CONF_OVERRIDE_DURATION = "override_duration"
 
 DEFAULT_SCAN_INTERVAL_SECONDS = 600
 DEFAULT_ENABLE_LIVE_DATA = False
 DEFAULT_ENABLE_DAILY_ENERGY = False
 DEFAULT_PRIMARY_LOAD_LABEL = "Primary Load"
+DEFAULT_OVERRIDE_DURATION_MINUTES = 120
+MIN_OVERRIDE_DURATION_MINUTES = 1
+MAX_OVERRIDE_DURATION_MINUTES = 480
 DEFAULT_SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL_SECONDS)
 
 
@@ -58,3 +66,8 @@ LIVE_EVENT_STALE_SECONDS = 30
 RUNTIME_SENSOR_24H = "runtime_24h"
 RUNTIME_SENSOR_7D_ROLLING = "runtime_7d_rolling"
 RUNTIME_SENSOR_TOTAL = "runtime_total"
+
+OVERRIDE_MODE_AUTO = "auto"
+OVERRIDE_MODE_ON = "on"
+OVERRIDE_MODE_OFF = "off"
+OVERRIDE_MODES = [OVERRIDE_MODE_AUTO, OVERRIDE_MODE_ON, OVERRIDE_MODE_OFF]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 DAILY_ENERGY_SERIES_MAP = {
@@ -191,3 +192,38 @@ def extract_live_event(payload: dict[str, Any]) -> dict[str, Any]:
         "channels": list(channels_by_key.values()),
         "device_count": payload.get("deviceCount"),
     }
+
+
+def resolve_relay_actor_id(actors: list[str], serial_number: object) -> str | None:
+    """Return the grid actor that controls a relay, matched by serial number."""
+    if not isinstance(serial_number, str) or not serial_number.strip():
+        return None
+    serial = serial_number.strip()
+    matches = [actor for actor in actors if actor.endswith(f".SR.{serial}")]
+    if not matches:
+        return None
+    preferred = next((actor for actor in matches if actor.startswith("GLD.")), matches[0])
+    return preferred
+
+
+def extract_override_state(payload: dict[str, Any]) -> dict[str, Any]:
+    """Read the active manual override from a ``/data/getScreenDef`` response."""
+    result = payload.get("result")
+    fields = result.get("fields") if isinstance(result, dict) else None
+    mode: str | None = None
+    expires_at: datetime | None = None
+    if isinstance(fields, list):
+        for field in fields:
+            if not isinstance(field, dict):
+                continue
+            current = field.get("currentValue")
+            if field.get("id") == "mode" and isinstance(current, str):
+                mode = current.strip().lower()
+            elif field.get("id") == "validUntil" and isinstance(current, (int, float)):
+                if not isinstance(current, bool):
+                    expires_at = datetime.fromtimestamp(current / 1000, tz=UTC)
+    if mode == "default":
+        mode = "auto"
+    if mode not in ("auto", "on", "off"):
+        mode = None
+    return {"mode": mode, "expires_at": expires_at}
