@@ -2,11 +2,12 @@
 
 Implementation and installation details are in the [README](README.md).
 
-## Unreleased
+## 0.4.0 — 2026-11-06
 
 - Add a **Primary Load Control** select (`Auto` / `On` / `Off`) backed by
   Catch's manual override endpoints, with a configurable 1-480 minute override
-  duration and automatic return to the relay schedule.
+  duration and automatic return to the relay schedule. The select reads the
+  active override from Catch at startup so app-set overrides are reflected.
 
 ## 0.3.0 — 2026-09-25
 
@@ -31,11 +32,12 @@ Implementation and installation details are in the [README](README.md).
   only runs the migration when the stored entry version differs from the flow's
   declared version.
 
-## Unreleased
+## 0.4.0 — 2026-11-06
 
 - Add a **Primary Load Control** select (`Auto` / `On` / `Off`) backed by
   Catch's manual override endpoints, with a configurable 1-480 minute override
-  duration and automatic return to the relay schedule.
+  duration and automatic return to the relay schedule. The select reads the
+  active override from Catch at startup so app-set overrides are reflected.
 
 ## 0.2.1 — 2026-08-19
 

@@ -34,14 +34,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     runtime_data = get_runtime_data(entry)
-    async_add_entities(
-        [CatchSolarPrimaryLoadControlSelect(runtime_data.coordinator, entry)]
-    )
+    async_add_entities([CatchSolarPrimaryLoadControlSelect(runtime_data.coordinator, entry)])
 
 
-class CatchSolarPrimaryLoadControlSelect(
-    CatchSolarLocationEntity, SelectEntity, RestoreEntity
-):
+class CatchSolarPrimaryLoadControlSelect(CatchSolarLocationEntity, SelectEntity, RestoreEntity):
     """Manual override for the primary controlled load.
 
     ``auto`` removes any override so the relay's own schedule takes over.
@@ -123,9 +119,7 @@ class CatchSolarPrimaryLoadControlSelect(
         expires_at = state.get("expires_at")
         if not isinstance(expires_at, datetime):
             expires_at = None
-        if mode != OVERRIDE_MODE_AUTO and (
-            expires_at is None or expires_at <= dt_util.utcnow()
-        ):
+        if mode != OVERRIDE_MODE_AUTO and (expires_at is None or expires_at <= dt_util.utcnow()):
             mode = OVERRIDE_MODE_AUTO
             expires_at = None
         self._option = mode

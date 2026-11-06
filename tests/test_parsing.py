@@ -169,6 +169,8 @@ def test_extract_live_event_drops_channels_with_an_undefined_type() -> None:
     )
 
     assert result["channels"] == []
+
+
 def test_resolve_relay_actor_id_prefers_grid_actor() -> None:
     from custom_components.catchsolar.parsing import resolve_relay_actor_id
 
@@ -201,9 +203,7 @@ def test_extract_override_state_maps_screen_fields() -> None:
     )
 
     assert result["mode"] == "on"
-    assert result["expires_at"] == datetime.fromtimestamp(
-        1793944841.483, tz=UTC
-    )
+    assert result["expires_at"] == datetime.fromtimestamp(1793944841.483, tz=UTC)
 
 
 def test_extract_override_state_treats_default_as_auto() -> None:

@@ -100,9 +100,7 @@ async def test_select_auto_removes_override() -> None:
 
     await entity.async_select_option(OVERRIDE_MODE_AUTO)
 
-    coordinator.api.async_remove_override.assert_awaited_once_with(
-        99999, "GLD.SR.88888"
-    )
+    coordinator.api.async_remove_override.assert_awaited_once_with(99999, "GLD.SR.88888")
     assert entity.current_option == OVERRIDE_MODE_AUTO
     assert entity.extra_state_attributes["override_expires_at"] is None
 
@@ -149,9 +147,7 @@ async def test_sync_reads_active_override_from_catch() -> None:
 
     await entity._async_sync_override_state()
 
-    coordinator.api.async_get_override_state.assert_awaited_once_with(
-        99999, "GLD.SR.88888"
-    )
+    coordinator.api.async_get_override_state.assert_awaited_once_with(99999, "GLD.SR.88888")
     assert entity.current_option == OVERRIDE_MODE_ON
 
 

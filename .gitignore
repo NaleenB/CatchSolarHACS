@@ -18,3 +18,5 @@ build/
 *.secrets
 scratch/
 tmp/
+.coverage
+htmlcov/

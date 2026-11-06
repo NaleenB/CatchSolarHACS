@@ -161,9 +161,7 @@ class CatchSolarApiClient:
             raise CatchSolarApiError("Invalid actors payload")
         return [item for item in result if isinstance(item, str)]
 
-    async def async_get_override_state(
-        self, location_id: int, actor_id: str
-    ) -> dict[str, Any]:
+    async def async_get_override_state(self, location_id: int, actor_id: str) -> dict[str, Any]:
         payload = await self._request_json(
             "POST",
             "/data/getScreenDef",
