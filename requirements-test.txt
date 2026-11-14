@@ -7,5 +7,5 @@ mypy==2.3.1
 # here. Bumping pytest on its own cannot resolve; bump the harness instead.
 pytest==9.0.3
 pytest-cov==7.1.0
-pytest-homeassistant-custom-component==0.13.366
+pytest-homeassistant-custom-component==0.13.375
 python-socketio==5.17.0
